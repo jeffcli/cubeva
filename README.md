@@ -20,6 +20,22 @@ npm run dev
 
 The app will run at `http://127.0.0.1:5173`.
 
+## Auth setup
+
+1. Create a Supabase project.
+2. Open the Supabase SQL editor and run `supabase/schema.sql`.
+3. Copy `.env.example` to `.env.local`.
+4. Add your project URL and anon key:
+
+```bash
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+5. Restart `npm run dev`.
+
+New signups automatically create a row in `profiles` using the username and display name from the signup form.
+
 ## Backend path
 
-The file `supabase/schema.sql` contains the starting database model. After creating a Supabase project, run that SQL in the Supabase SQL editor, then add Supabase Auth and replace the local React state with API calls.
+The file `supabase/schema.sql` contains the starting database model, row level security policies, and the auth trigger that creates profiles.

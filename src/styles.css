@@ -32,6 +32,96 @@ button {
   justify-content: center;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.auth-shell {
+  align-items: center;
+  display: grid;
+  gap: 24px;
+  justify-items: center;
+  min-height: 100vh;
+  padding: 22px;
+}
+
+.auth-brand {
+  justify-self: start;
+  left: 22px;
+  position: fixed;
+  top: 22px;
+}
+
+.auth-card {
+  background: #fffcf4;
+  border: 1px solid #e1dbce;
+  border-radius: 8px;
+  box-shadow: 0 22px 60px rgba(29, 35, 32, 0.12);
+  display: grid;
+  gap: 16px;
+  max-width: 480px;
+  padding: 24px;
+  width: min(100%, 480px);
+}
+
+.auth-card h1,
+.auth-card p {
+  margin: 0;
+}
+
+.auth-card h1 {
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  line-height: 1;
+}
+
+.auth-card > button,
+.auth-form button {
+  background: #17211d;
+  color: white;
+  min-height: 46px;
+  padding: 0 16px;
+}
+
+.auth-code {
+  background: #17211d;
+  border-radius: 8px;
+  color: #f8f2e7;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.86rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  padding: 14px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+}
+
+.auth-form label {
+  color: #5a655f;
+  display: grid;
+  font-size: 0.82rem;
+  font-weight: 800;
+  gap: 6px;
+}
+
+.auth-message {
+  background: #edf5f0;
+  border-radius: 8px;
+  color: #17211d;
+  padding: 12px;
+}
+
+.link-button {
+  background: transparent;
+  color: #1e675d;
+  justify-self: start;
+  min-height: 0;
+  padding: 0;
+}
+
 .app-shell {
   display: grid;
   gap: 22px;
@@ -102,6 +192,13 @@ small,
 .nav-list {
   display: grid;
   gap: 8px;
+}
+
+.sign-out {
+  background: #17211d;
+  color: white;
+  min-height: 42px;
+  padding: 0 12px;
 }
 
 .nav-list a {

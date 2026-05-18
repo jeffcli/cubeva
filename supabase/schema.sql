@@ -40,3 +40,86 @@ create table public.solves (
 create index sessions_user_created_idx on public.sessions (user_id, created_at desc);
 create index solves_session_created_idx on public.solves (session_id, created_at desc);
 create index follows_following_idx on public.follows (following_id);
+
+alter table public.profiles enable row level security;
+alter table public.follows enable row level security;
+alter table public.sessions enable row level security;
+alter table public.solves enable row level security;
+
+create policy "Profiles are visible to everyone"
+  on public.profiles for select
+  using (true);
+
+create policy "Users can update their own profile"
+  on public.profiles for update
+  using (auth.uid() = id);
+
+create policy "Users can read their own follows"
+  on public.follows for select
+  using (auth.uid() = follower_id or auth.uid() = following_id);
+
+create policy "Users can manage their own follows"
+  on public.follows for all
+  using (auth.uid() = follower_id)
+  with check (auth.uid() = follower_id);
+
+create policy "Public sessions are visible to everyone"
+  on public.sessions for select
+  using (visibility = 'public' or auth.uid() = user_id);
+
+create policy "Users can manage their own sessions"
+  on public.sessions for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Solves are visible with their sessions"
+  on public.solves for select
+  using (
+    exists (
+      select 1
+      from public.sessions
+      where sessions.id = solves.session_id
+        and (sessions.visibility = 'public' or sessions.user_id = auth.uid())
+    )
+  );
+
+create policy "Users can manage solves in their sessions"
+  on public.solves for all
+  using (
+    exists (
+      select 1
+      from public.sessions
+      where sessions.id = solves.session_id
+        and sessions.user_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.sessions
+      where sessions.id = solves.session_id
+        and sessions.user_id = auth.uid()
+    )
+  );
+
+create function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  insert into public.profiles (id, username, display_name, avatar_url, bio)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'username', split_part(new.email, '@', 1)),
+    coalesce(new.raw_user_meta_data ->> 'display_name', split_part(new.email, '@', 1)),
+    null,
+    null
+  );
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
