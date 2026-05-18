@@ -423,6 +423,31 @@ textarea {
   background: #39a48f;
 }
 
+.timer-face.inspection {
+  background: #edf5f0;
+}
+
+.manual-only-panel {
+  background: #edf5f0;
+  border: 3px solid #17211d;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  min-height: 180px;
+  place-content: center;
+  text-align: center;
+}
+
+.manual-only-panel strong {
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1;
+}
+
+.manual-only-panel span {
+  color: #34413d;
+  font-weight: 800;
+}
+
 .timer-face span {
   font-size: clamp(4.4rem, 10vw, 8.4rem);
   font-variant-numeric: tabular-nums;
@@ -448,6 +473,19 @@ textarea {
 
 .action-row {
   flex-wrap: wrap;
+}
+
+.toggle-row {
+  align-items: center;
+  color: #34413d;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 10px;
+}
+
+.toggle-row input {
+  min-height: auto;
+  width: 18px;
 }
 
 .action-row button,
@@ -496,9 +534,25 @@ textarea {
   margin-top: 12px;
 }
 
-.manual-controls input {
+.manual-controls input,
+.import-controls textarea {
   flex: 1;
   min-width: 120px;
+}
+
+.import-controls {
+  align-items: stretch;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 12px;
+}
+
+.import-controls button {
+  background: #17211d;
+  color: white;
+  min-height: 44px;
+  padding: 0 14px;
 }
 
 .section-head {
@@ -517,8 +571,13 @@ textarea {
   border-top: 1px solid #e7e0d3;
   display: grid;
   gap: 10px;
-  grid-template-columns: 46px 90px 54px minmax(0, 1fr);
+  grid-template-columns: 46px 90px 76px minmax(0, 1fr) 42px;
   min-height: 54px;
+}
+
+.solve-row select {
+  min-height: 36px;
+  padding: 0 8px;
 }
 
 .solve-row p {
@@ -528,6 +587,14 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.solve-row button {
+  background: #edf5f0;
+  color: #17211d;
+  height: 36px;
+  padding: 0;
+  width: 36px;
 }
 
 .right-rail {
@@ -632,6 +699,7 @@ textarea {
   .profile-identity,
   .profile-actions,
   .right-rail,
+  .import-controls,
   .manual-controls {
     align-items: stretch;
     display: flex;
@@ -647,7 +715,7 @@ textarea {
   }
 
   .solve-row {
-    grid-template-columns: 42px 80px 48px;
+    grid-template-columns: 42px 80px 76px 42px;
   }
 
   .solve-row p {
