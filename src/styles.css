@@ -17,7 +17,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -201,23 +202,28 @@ small,
   padding: 0 12px;
 }
 
-.nav-list a {
+.nav-list button {
   align-items: center;
+  background: transparent;
   border-radius: 8px;
   color: #34413d;
   display: flex;
   gap: 10px;
+  justify-content: flex-start;
   padding: 12px;
   text-decoration: none;
+  width: 100%;
 }
 
-.nav-list a.active,
-.nav-list a:hover {
+.nav-list button.active,
+.nav-list button:hover {
   background: #17211d;
   color: white;
 }
 
 .profile-card,
+.profile-hero,
+.profile-editor,
 .timer-panel,
 .manual-log,
 .solve-table,
@@ -230,15 +236,83 @@ small,
 }
 
 .profile-card {
+  color: inherit;
   display: grid;
   gap: 10px;
+  justify-items: start;
   padding: 18px;
+  text-align: left;
+}
+
+.compact-profile {
+  background: #fffcf4;
+  width: 100%;
+}
+
+.profile-hero {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+}
+
+.profile-hero h2 {
+  font-size: clamp(2.1rem, 5vw, 4rem);
+  line-height: 0.98;
+  margin: 0;
+}
+
+.profile-hero p {
+  margin: 0;
+}
+
+.profile-identity,
+.profile-actions {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+}
+
+.profile-actions button,
+.profile-editor button {
+  background: #17211d;
+  color: white;
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+.profile-editor {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.profile-editor label {
+  color: #5a655f;
+  display: grid;
+  font-size: 0.82rem;
+  font-weight: 800;
+  gap: 6px;
+}
+
+.profile-history {
+  margin-top: 0;
+}
+
+.secondary-button {
+  background: #edf5f0 !important;
+  color: #17211d !important;
 }
 
 .avatar.large {
   font-size: 1.4rem;
   height: 62px;
   width: 62px;
+}
+
+.avatar.xl {
+  font-size: 1.75rem;
+  height: 78px;
+  width: 78px;
 }
 
 .mini-grid,
@@ -302,13 +376,20 @@ small,
 }
 
 select,
-input {
+input,
+textarea {
   background: white;
   border: 1px solid #cfc8ba;
   border-radius: 8px;
   color: #17211d;
   min-height: 44px;
   padding: 0 12px;
+}
+
+textarea {
+  line-height: 1.5;
+  padding: 12px;
+  resize: vertical;
 }
 
 .timer-panel {
@@ -353,6 +434,16 @@ input {
   display: block;
   font-weight: 800;
   margin-top: 8px;
+}
+
+.session-message,
+.empty-state {
+  background: #edf5f0;
+  border-radius: 8px;
+  color: #34413d;
+  font-weight: 700;
+  margin: 0;
+  padding: 12px;
 }
 
 .action-row {
@@ -511,6 +602,13 @@ input {
   background: #39a48f;
 }
 
+.person-row .view-profile-button {
+  background: #edf5f0;
+  color: #17211d;
+  padding: 0 12px;
+  width: auto;
+}
+
 @media (max-width: 1120px) {
   .app-shell {
     grid-template-columns: 210px minmax(0, 1fr);
@@ -531,6 +629,8 @@ input {
   }
 
   .topbar,
+  .profile-identity,
+  .profile-actions,
   .right-rail,
   .manual-controls {
     align-items: stretch;

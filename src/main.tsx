@@ -4,6 +4,7 @@ import {
   Activity,
   Clock,
   LogOut,
+  Edit3,
   Flame,
   Heart,
   Play,
@@ -18,28 +19,18 @@ import {
 import "./styles.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Session as AuthSession, User } from "@supabase/supabase-js";
+import {
+  fetchProfile,
+  fetchUserSessions,
+  getUserDisplay,
+  saveSession,
+  updateProfile,
+  type AppProfile,
+  type AppSession,
+  type AppSolve,
+  type Penalty,
+} from "./database";
 import { isSupabaseConfigured, supabase } from "./supabase";
-
-type Penalty = "ok" | "+2" | "dnf";
-
-type Solve = {
-  id: string;
-  timeMs: number;
-  penalty: Penalty;
-  scramble: string;
-  createdAt: string;
-};
-
-type Session = {
-  id: string;
-  user: string;
-  avatar: string;
-  puzzle: string;
-  title: string;
-  solves: Solve[];
-  createdAt: string;
-  liked: boolean;
-};
 
 type FollowCandidate = {
   id: string;
@@ -48,6 +39,8 @@ type FollowCandidate = {
   avatar: string;
   average: string;
   following: boolean;
+  bio: string;
+  sessions: AppSession[];
 };
 
 const sampleScrambles = [
@@ -58,7 +51,7 @@ const sampleScrambles = [
   "U F2 R U' R2 F L' D2 B U2",
 ];
 
-const starterSessions: Session[] = [
+const starterSessions: AppSession[] = [
   {
     id: "s1",
     user: "Maya Chen",
@@ -93,7 +86,7 @@ const starterSessions: Session[] = [
   },
 ];
 
-const initialSolves = [
+const initialSolves: AppSolve[] = [
   makeSolve(21420, "ok"),
   makeSolve(20350, "ok"),
   makeSolve(22810, "+2"),
@@ -108,6 +101,11 @@ const candidates: FollowCandidate[] = [
     avatar: "LO",
     average: "avg 16.84",
     following: false,
+    bio: "Color-neutral 3x3 solver working on smoother F2L and calmer last layers.",
+    sessions: [
+      makeCandidateSession("Lena Ortiz", "LO", "3x3", "Evening lookahead block", [16840, 17220, 16190, 17980, 16550]),
+      makeCandidateSession("Lena Ortiz", "LO", "2x2", "Quick layer drills", [5290, 4810, 5120, 4960, 5030]),
+    ],
   },
   {
     id: "u2",
@@ -116,6 +114,11 @@ const candidates: FollowCandidate[] = [
     avatar: "SR",
     average: "avg 21.03",
     following: true,
+    bio: "Casual cuber chasing sub-20 while keeping solves fun.",
+    sessions: [
+      makeCandidateSession("Sam Rivera", "SR", "3x3", "Sub-20 attempt set", [21030, 19840, 22450, 20580, 21710]),
+      makeCandidateSession("Sam Rivera", "SR", "Pyraminx", "Tips-only practice", [8120, 7790, 8400, 7950, 7680]),
+    ],
   },
   {
     id: "u3",
@@ -124,10 +127,28 @@ const candidates: FollowCandidate[] = [
     avatar: "IZ",
     average: "avg 13.92",
     following: false,
+    bio: "Cross planning nerd. Mostly 3x3, sometimes OH when the wrists cooperate.",
+    sessions: [
+      makeCandidateSession("Iris Zhou", "IZ", "3x3", "Fast cross planning", [13920, 14410, 13680, 14190, 13220]),
+      makeCandidateSession("Iris Zhou", "IZ", "OH", "Controlled TPS set", [27910, 28640, 27120, 29500, 28220]),
+    ],
   },
 ];
 
-function makeSolve(timeMs: number, penalty: Penalty): Solve {
+type AppView = "timer" | "feed" | "people" | "profile";
+
+type ProfileView = {
+  id: string;
+  displayName: string;
+  username: string;
+  initials: string;
+  bio: string;
+  following?: boolean;
+  sessions: AppSession[];
+  isSelf: boolean;
+};
+
+function makeSolve(timeMs: number, penalty: Penalty): AppSolve {
   return {
     id: crypto.randomUUID(),
     timeMs,
@@ -135,6 +156,25 @@ function makeSolve(timeMs: number, penalty: Penalty): Solve {
     scramble:
       sampleScrambles[Math.floor(Math.random() * sampleScrambles.length)],
     createdAt: new Date().toISOString(),
+  };
+}
+
+function makeCandidateSession(
+  user: string,
+  avatar: string,
+  puzzle: string,
+  title: string,
+  times: number[],
+): AppSession {
+  return {
+    id: crypto.randomUUID(),
+    user,
+    avatar,
+    puzzle,
+    title,
+    createdAt: "This week",
+    liked: false,
+    solves: times.map((time) => makeSolve(time, "ok")),
   };
 }
 
@@ -147,17 +187,26 @@ function formatTime(ms: number, penalty: Penalty = "ok") {
     : `${Math.floor(seconds / 60)}:${(seconds % 60).toFixed(2).padStart(5, "0")}`;
 }
 
-function effectiveTime(solve: Solve) {
+function effectiveTime(solve: AppSolve) {
   if (solve.penalty === "dnf") return Number.POSITIVE_INFINITY;
   return solve.timeMs + (solve.penalty === "+2" ? 2000 : 0);
 }
 
-function average(solves: Solve[]) {
+function average(solves: AppSolve[]) {
   const valid = solves.filter((solve) => solve.penalty !== "dnf");
   if (!valid.length) return "DNF";
   return formatTime(
     valid.reduce((sum, solve) => sum + effectiveTime(solve), 0) / valid.length,
   );
+}
+
+function bestTime(solves: AppSolve[]) {
+  const validTimes = solves
+    .map(effectiveTime)
+    .filter((time) => Number.isFinite(time));
+
+  if (!validTimes.length) return "DNF";
+  return formatTime(Math.min(...validTimes));
 }
 
 function App() {
@@ -225,31 +274,27 @@ function CubeApp({
   onSignOut: () => void;
   demoMode: boolean;
 }) {
-  const [solves, setSolves] = useState<Solve[]>(initialSolves);
-  const [sessions, setSessions] = useState<Session[]>(starterSessions);
+  const [solves, setSolves] = useState<AppSolve[]>(demoMode ? initialSolves : []);
+  const [sessions, setSessions] = useState<AppSession[]>(demoMode ? starterSessions : []);
   const [following, setFollowing] = useState(candidates);
   const [manualTime, setManualTime] = useState("");
   const [manualPenalty, setManualPenalty] = useState<Penalty>("ok");
   const [puzzle, setPuzzle] = useState("3x3");
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [displayProfile, setDisplayProfile] = useState(getUserDisplay(user));
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionMessage, setSessionMessage] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [activeView, setActiveView] = useState<AppView>("timer");
+  const [selectedProfile, setSelectedProfile] = useState<ProfileView | null>(null);
+  const [profileRecord, setProfileRecord] = useState<AppProfile | null>(null);
+  const [profileForm, setProfileForm] = useState({ displayName: "", username: "", bio: "" });
+  const [profileEditing, setProfileEditing] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
   const startRef = useRef(0);
-  const displayName = String(
-    user?.user_metadata.display_name ||
-      user?.email?.split("@")[0] ||
-      "Demo Cuber",
-  );
-  const username = String(
-    user?.user_metadata.username ||
-      displayName.toLowerCase().replace(/[^a-z0-9]+/g, ""),
-  );
-  const initials =
-    displayName
-      .split(" ")
-      .map((part) => part[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "Y";
+  const { displayName, username, initials } = displayProfile;
 
   useEffect(() => {
     if (!running) return;
@@ -258,6 +303,89 @@ function CubeApp({
     }, 17);
     return () => window.clearInterval(interval);
   }, [running]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPersistedData() {
+      setDisplayProfile(getUserDisplay(user));
+
+      if (demoMode || !user) {
+        setSolves(initialSolves);
+        setSessions(starterSessions);
+        setSessionsLoading(false);
+        setProfileRecord(null);
+        setProfileForm({
+          displayName: getUserDisplay(null).displayName,
+          username: getUserDisplay(null).username,
+          bio: "Practicing consistency and building CubeVa.",
+        });
+        return;
+      }
+
+      setSolves([]);
+      setSessionsLoading(true);
+      setSessionMessage("");
+
+      try {
+        const [profile, loadedSessions] = await Promise.all([
+          fetchProfile(user.id),
+          fetchUserSessions(user),
+        ]);
+
+        if (cancelled) return;
+
+        if (profile) {
+          const profileDisplay = profile.display_name || getUserDisplay(user).displayName;
+          setDisplayProfile({
+            displayName: profileDisplay,
+            username: profile.username,
+            bio: profile.bio ?? "",
+            initials:
+              profileDisplay
+                .split(" ")
+                .map((part) => part[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase() || "Y",
+          });
+          setProfileRecord(profile);
+          setProfileForm({
+            displayName: profileDisplay,
+            username: profile.username,
+            bio: profile.bio ?? "",
+          });
+        }
+
+        setSessions(loadedSessions);
+      } catch (error) {
+        if (!cancelled) {
+          setSessionMessage(error instanceof Error ? error.message : "Could not load sessions.");
+        }
+      } finally {
+        if (!cancelled) setSessionsLoading(false);
+      }
+    }
+
+    loadPersistedData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [demoMode, user]);
+
+  const selfProfile = useMemo<ProfileView>(() => ({
+    id: user?.id ?? "demo-user",
+    displayName,
+    username,
+    initials,
+    bio: profileRecord?.bio || displayProfile.bio || "Practicing consistency and building CubeVa.",
+    sessions,
+    isSelf: true,
+  }), [displayName, displayProfile.bio, initials, profileRecord?.bio, sessions, user?.id, username]);
+
+  const profileToShow = selectedProfile ?? selfProfile;
+  const profileStats = useMemo(() => getProfileStats(profileToShow.sessions), [profileToShow.sessions]);
 
   const stats = useMemo(() => {
     const valid = solves.filter((solve) => solve.penalty !== "dnf");
@@ -301,9 +429,31 @@ function CubeApp({
     setManualPenalty("ok");
   }
 
-  function publishSession() {
+  async function publishSession() {
     if (!solves.length) return;
-    const session: Session = {
+    setPublishing(true);
+    setSessionMessage("");
+
+    if (user && !demoMode) {
+      try {
+        const savedSession = await saveSession({
+          user,
+          puzzle,
+          title: `${puzzle} practice session`,
+          solves,
+        });
+        setSessions((current) => [savedSession, ...current]);
+        setSolves([]);
+        setSessionMessage("Session saved to Supabase.");
+      } catch (error) {
+        setSessionMessage(error instanceof Error ? error.message : "Could not save session.");
+      } finally {
+        setPublishing(false);
+      }
+      return;
+    }
+
+    const session: AppSession = {
       id: crypto.randomUUID(),
       user: displayName,
       avatar: initials,
@@ -315,6 +465,86 @@ function CubeApp({
     };
     setSessions((current) => [session, ...current]);
     setSolves([]);
+    setSessionMessage("Demo session published locally.");
+    setPublishing(false);
+  }
+
+  async function saveProfileEdits(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setProfileMessage("");
+
+    if (demoMode || !user) {
+      const fakeProfile = {
+        ...displayProfile,
+        displayName: profileForm.displayName,
+        username: profileForm.username,
+        bio: profileForm.bio,
+      };
+      setDisplayProfile(fakeProfile);
+      setProfileEditing(false);
+      setProfileMessage("Demo profile updated locally.");
+      return;
+    }
+
+    setProfileSaving(true);
+    try {
+      const updated = await updateProfile({
+        userId: user.id,
+        displayName: profileForm.displayName,
+        username: profileForm.username,
+        bio: profileForm.bio,
+      });
+      const updatedDisplay = getUserDisplay(user, updated);
+      setProfileRecord(updated);
+      setDisplayProfile(updatedDisplay);
+      setProfileForm({
+        displayName: updatedDisplay.displayName,
+        username: updatedDisplay.username,
+        bio: updated.bio ?? "",
+      });
+      setProfileEditing(false);
+      setProfileMessage("Profile saved.");
+    } catch (error) {
+      setProfileMessage(error instanceof Error ? error.message : "Could not save profile.");
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
+  function openCandidateProfile(person: FollowCandidate) {
+    setSelectedProfile({
+      id: person.id,
+      displayName: person.name,
+      username: person.handle.replace("@", ""),
+      initials: person.avatar,
+      bio: person.bio,
+      following: person.following,
+      sessions: person.sessions,
+      isSelf: false,
+    });
+    setActiveView("profile");
+    setProfileEditing(false);
+  }
+
+  function showSelfProfile() {
+    setSelectedProfile(null);
+    setActiveView("profile");
+    setProfileEditing(false);
+  }
+
+  function toggleSelectedFollow() {
+    if (!selectedProfile) return;
+
+    setFollowing((current) =>
+      current.map((person) =>
+        person.id === selectedProfile.id
+          ? { ...person, following: !person.following }
+          : person,
+      ),
+    );
+    setSelectedProfile((current) =>
+      current ? { ...current, following: !current.following } : current,
+    );
   }
 
   return (
@@ -332,21 +562,21 @@ function CubeApp({
         </button>
 
         <nav className="nav-list" aria-label="Primary">
-          <a className="active" href="#timer">
+          <button className={activeView === "timer" ? "active" : ""} type="button" onClick={() => setActiveView("timer")}>
             <Timer size={18} /> Timer
-          </a>
-          <a href="#feed">
+          </button>
+          <button className={activeView === "feed" ? "active" : ""} type="button" onClick={() => setActiveView("feed")}>
             <Activity size={18} /> Feed
-          </a>
-          <a href="#people">
+          </button>
+          <button className={activeView === "people" ? "active" : ""} type="button" onClick={() => setActiveView("people")}>
             <Users size={18} /> People
-          </a>
-          <a href="#profile">
+          </button>
+          <button className={activeView === "profile" ? "active" : ""} type="button" onClick={showSelfProfile}>
             <Trophy size={18} /> Profile
-          </a>
+          </button>
         </nav>
 
-        <section className="profile-card" id="profile">
+        <button className="profile-card compact-profile" type="button" onClick={showSelfProfile}>
           <div className="avatar large">{initials}</div>
           <h2>{displayName}</h2>
           <p>@{username} · 3x3 focus</p>
@@ -358,10 +588,10 @@ function CubeApp({
               <strong>{stats.average}</strong> Avg
             </span>
           </div>
-        </section>
+        </button>
       </aside>
 
-      <section className="workspace" id="timer">
+      <section className="workspace" id="timer" hidden={activeView !== "timer"}>
         <header className="topbar">
           <div>
             <p className="eyebrow">Current session</p>
@@ -401,10 +631,11 @@ function CubeApp({
               {running ? <Square size={18} /> : <Play size={18} />}{" "}
               {running ? "Stop" : "Start"}
             </button>
-            <button type="button" onClick={publishSession}>
-              <Plus size={18} /> Publish Session
+            <button type="button" onClick={publishSession} disabled={publishing || !solves.length}>
+              <Plus size={18} /> {publishing ? "Publishing..." : "Publish Session"}
             </button>
           </div>
+          {sessionMessage && <p className="session-message">{sessionMessage}</p>}
         </section>
 
         <section className="stats-grid">
@@ -467,12 +698,39 @@ function CubeApp({
         </section>
       </section>
 
+      <section className="workspace" hidden={activeView !== "profile"}>
+        <ProfilePage
+          profile={profileToShow}
+          stats={profileStats}
+          isEditing={profileEditing}
+          form={profileForm}
+          message={profileMessage}
+          saving={profileSaving}
+          onEdit={() => {
+            setProfileForm({
+              displayName,
+              username,
+              bio: selfProfile.bio,
+            });
+            setProfileEditing(true);
+            setProfileMessage("");
+          }}
+          onCancel={() => setProfileEditing(false)}
+          onSave={saveProfileEdits}
+          onFormChange={setProfileForm}
+          onFollow={toggleSelectedFollow}
+        />
+      </section>
+
       <aside className="right-rail">
-        <section className="feed" id="feed">
+        <section className="feed" id="feed" hidden={activeView === "people"}>
           <div className="section-head">
             <h3>Following feed</h3>
-            <span>{sessions.length} updates</span>
+            <span>{sessionsLoading ? "Loading" : `${sessions.length} updates`}</span>
           </div>
+          {!sessionsLoading && sessions.length === 0 && (
+            <p className="empty-state">No saved sessions yet. Publish your first block from the timer.</p>
+          )}
           {sessions.map((session) => (
             <article className="feed-item" key={session.id}>
               <div className="feed-author">
@@ -487,10 +745,7 @@ function CubeApp({
               <p>{session.title}</p>
               <div className="feed-stats">
                 <span>avg {average(session.solves)}</span>
-                <span>
-                  best{" "}
-                  {formatTime(Math.min(...session.solves.map(effectiveTime)))}
-                </span>
+                <span>best {bestTime(session.solves)}</span>
                 <span>{session.solves.length} solves</span>
               </div>
               <button className={session.liked ? "liked" : ""} type="button">
@@ -500,7 +755,7 @@ function CubeApp({
           ))}
         </section>
 
-        <section className="people" id="people">
+        <section className="people" id="people" hidden={activeView === "feed"}>
           <div className="section-head">
             <h3>Find cubers</h3>
             <Search size={18} />
@@ -530,11 +785,130 @@ function CubeApp({
               >
                 <UserPlus size={16} />
               </button>
+              <button className="view-profile-button" type="button" onClick={() => openCandidateProfile(person)}>
+                View
+              </button>
             </div>
           ))}
         </section>
       </aside>
     </main>
+  );
+}
+
+function getProfileStats(sessions: AppSession[]) {
+  const allSolves = sessions.flatMap((session) => session.solves);
+  const events = new Set(sessions.map((session) => session.puzzle));
+
+  return {
+    sessionCount: sessions.length,
+    solveCount: allSolves.length,
+    best: allSolves.length ? bestTime(allSolves) : "--",
+    average: allSolves.length ? average(allSolves) : "--",
+    eventCount: events.size,
+  };
+}
+
+function ProfilePage({
+  profile,
+  stats,
+  isEditing,
+  form,
+  message,
+  saving,
+  onEdit,
+  onCancel,
+  onSave,
+  onFormChange,
+  onFollow,
+}: {
+  profile: ProfileView;
+  stats: ReturnType<typeof getProfileStats>;
+  isEditing: boolean;
+  form: { displayName: string; username: string; bio: string };
+  message: string;
+  saving: boolean;
+  onEdit: () => void;
+  onCancel: () => void;
+  onSave: (event: React.FormEvent<HTMLFormElement>) => void;
+  onFormChange: (form: { displayName: string; username: string; bio: string }) => void;
+  onFollow: () => void;
+}) {
+  return (
+    <>
+      <section className="profile-hero">
+        <div className="profile-identity">
+          <div className="avatar xl">{profile.initials}</div>
+          <div>
+            <p className="eyebrow">{profile.isSelf ? "Your profile" : "Public profile"}</p>
+            <h2>{profile.displayName}</h2>
+            <p>@{profile.username}</p>
+          </div>
+        </div>
+        <p>{profile.bio || "No bio yet."}</p>
+        <div className="profile-actions">
+          {profile.isSelf ? (
+            <button type="button" onClick={onEdit}><Edit3 size={18} /> Edit Profile</button>
+          ) : (
+            <button type="button" onClick={onFollow}><UserPlus size={18} /> {profile.following ? "Following" : "Follow"}</button>
+          )}
+        </div>
+      </section>
+
+      {profile.isSelf && isEditing && (
+        <form className="profile-editor" onSubmit={onSave}>
+          <label>
+            Display name
+            <input value={form.displayName} onChange={(event) => onFormChange({ ...form, displayName: event.target.value })} required />
+          </label>
+          <label>
+            Username
+            <input value={form.username} onChange={(event) => onFormChange({ ...form, username: event.target.value })} required />
+          </label>
+          <label>
+            Bio
+            <textarea value={form.bio} onChange={(event) => onFormChange({ ...form, bio: event.target.value })} rows={4} />
+          </label>
+          <div className="action-row">
+            <button type="submit" disabled={saving}>{saving ? "Saving..." : "Save Profile"}</button>
+            <button className="secondary-button" type="button" onClick={onCancel}>Cancel</button>
+          </div>
+        </form>
+      )}
+
+      {message && <p className="session-message">{message}</p>}
+
+      <section className="stats-grid">
+        <Metric icon={<Trophy size={18} />} label="PB" value={stats.best} />
+        <Metric icon={<Activity size={18} />} label="Average" value={stats.average} />
+        <Metric icon={<Clock size={18} />} label="Sessions" value={String(stats.sessionCount)} />
+        <Metric icon={<Flame size={18} />} label="Solves" value={String(stats.solveCount)} />
+      </section>
+
+      <section className="feed profile-history">
+        <div className="section-head">
+          <h3>Recent sessions</h3>
+          <span>{stats.eventCount} events</span>
+        </div>
+        {profile.sessions.length === 0 && <p className="empty-state">No public sessions yet.</p>}
+        {profile.sessions.map((session) => (
+          <article className="feed-item" key={session.id}>
+            <div className="feed-author">
+              <div className="avatar">{session.avatar}</div>
+              <div>
+                <strong>{session.title}</strong>
+                <small>{session.createdAt} · {session.puzzle}</small>
+              </div>
+            </div>
+            <div className="feed-stats">
+              <span>avg {average(session.solves)}</span>
+              <span>best {bestTime(session.solves)}</span>
+              <span>{session.solves.length} solves</span>
+            </div>
+          </article>
+        ))}
+      </section>
+    </>
   );
 }
 
