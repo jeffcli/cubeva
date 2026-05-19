@@ -10,6 +10,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -126,13 +130,12 @@ button:disabled {
 .app-shell {
   display: grid;
   gap: 22px;
-  grid-template-columns: 260px minmax(360px, 1fr) 360px;
+  grid-template-columns: 260px minmax(360px, 1fr);
   min-height: 100vh;
   padding: 22px;
 }
 
 .sidebar,
-.right-rail,
 .workspace {
   min-width: 0;
 }
@@ -224,6 +227,7 @@ small,
 .profile-card,
 .profile-hero,
 .profile-editor,
+.feed-card,
 .timer-panel,
 .manual-log,
 .solve-table,
@@ -523,6 +527,114 @@ textarea {
   padding: 16px;
 }
 
+.feed-page-header {
+  align-items: end;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.feed-page-header h2 {
+  font-size: clamp(2rem, 4vw, 3.6rem);
+  line-height: 0.98;
+  margin: 0;
+}
+
+.feed-page-header p,
+.feed-page-header span {
+  margin: 0;
+}
+
+.feed-page-header span {
+  color: #6d7771;
+  font-weight: 900;
+}
+
+.feed-page {
+  display: grid;
+  gap: 16px;
+}
+
+.feed-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.feed-card-header,
+.feed-card-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.feed-card-header strong,
+.feed-card-header small {
+  display: block;
+}
+
+.feed-card-body {
+  align-items: start;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.55fr);
+}
+
+.feed-card-body h3 {
+  font-size: clamp(1.45rem, 2.4vw, 2.25rem);
+  line-height: 1.05;
+  margin: 0;
+}
+
+.feed-card-body p {
+  margin: 0 0 6px;
+}
+
+.feed-card-stats {
+  display: grid;
+  gap: 8px;
+}
+
+.feed-card-stats span,
+.solve-strip span {
+  align-items: center;
+  background: #edf5f0;
+  border-radius: 8px;
+  display: inline-flex;
+  font-weight: 900;
+  gap: 7px;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+.solve-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.solve-strip span {
+  background: #f2eadc;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+.feed-card-actions {
+  border-top: 1px solid #e7e0d3;
+  padding-top: 14px;
+}
+
+.feed-card-actions button {
+  background: #17211d;
+  color: white;
+  min-height: 40px;
+  padding: 0 14px;
+}
+
+.feed-card-actions button.liked {
+  background: #e0482f;
+}
+
 .manual-log h3,
 .solve-table h3,
 .feed h3,
@@ -595,12 +707,6 @@ textarea {
   height: 36px;
   padding: 0;
   width: 36px;
-}
-
-.right-rail {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 .feed,
@@ -680,12 +786,6 @@ textarea {
   .app-shell {
     grid-template-columns: 210px minmax(0, 1fr);
   }
-
-  .right-rail {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
 }
 
 @media (max-width: 760px) {
@@ -696,9 +796,10 @@ textarea {
   }
 
   .topbar,
+  .feed-page-header,
+  .feed-card-body,
   .profile-identity,
   .profile-actions,
-  .right-rail,
   .import-controls,
   .manual-controls {
     align-items: stretch;

@@ -3,7 +3,6 @@ import {
   Clock,
   Flame,
   LogOut,
-  Heart,
   Play,
   Plus,
   Search,
@@ -34,6 +33,7 @@ import {
   type SocialProfile,
 } from "./database";
 import { AuthScreen, AuthShell } from "./components/Auth";
+import { FeedPage } from "./components/FeedPage";
 import { Metric } from "./components/Metric";
 import { ProfilePage } from "./components/ProfilePage";
 import { eventConfig, generateScramble, wcaEvents } from "./scrambles";
@@ -41,7 +41,6 @@ import { candidates, initialSolves, starterSessions } from "./mockData";
 import {
   average,
   averageOf,
-  bestTime,
   effectiveTime,
   formatSolveResult,
   formatTime,
@@ -337,6 +336,15 @@ function CubeApp({
   const profileStats = useMemo(
     () => getProfileStats(profileToShow.sessions),
     [profileToShow.sessions],
+  );
+  const chronologicalFeedSessions = useMemo(
+    () =>
+      [...feedSessions].sort(
+        (a, b) =>
+          Date.parse(b.createdAtSort ?? b.createdAt) -
+          Date.parse(a.createdAtSort ?? a.createdAt),
+      ),
+    [feedSessions],
   );
 
   const stats = useMemo(() => {
@@ -900,44 +908,12 @@ function CubeApp({
         />
       </section>
 
-      <aside className="right-rail">
-        <section className="feed" id="feed" hidden={activeView === "people"}>
-          <div className="section-head">
-            <h3>Following feed</h3>
-            <span>
-              {sessionsLoading ? "Loading" : `${feedSessions.length} updates`}
-            </span>
-          </div>
-          {!sessionsLoading && feedSessions.length === 0 && (
-            <p className="empty-state">
-              Follow a cuber with public sessions to fill your feed.
-            </p>
-          )}
-          {feedSessions.map((session) => (
-            <article className="feed-item" key={session.id}>
-              <div className="feed-author">
-                <div className="avatar">{session.avatar}</div>
-                <div>
-                  <strong>{session.user}</strong>
-                  <small>
-                    {session.createdAt} · {session.puzzle}
-                  </small>
-                </div>
-              </div>
-              <p>{session.title}</p>
-              <div className="feed-stats">
-                <span>avg {average(session.solves)}</span>
-                <span>best {bestTime(session.solves)}</span>
-                <span>{session.solves.length} solves</span>
-              </div>
-              <button className={session.liked ? "liked" : ""} type="button">
-                <Heart size={17} /> Like
-              </button>
-            </article>
-          ))}
-        </section>
+      <section className="workspace" hidden={activeView !== "feed"}>
+        <FeedPage sessions={chronologicalFeedSessions} loading={sessionsLoading} />
+      </section>
 
-        <section className="people" id="people" hidden={activeView === "feed"}>
+      <section className="workspace" hidden={activeView !== "people"}>
+        <section className="people" id="people">
           <div className="section-head">
             <h3>Find cubers</h3>
             {peopleLoading ? <span>Loading</span> : <Search size={18} />}
@@ -974,7 +950,7 @@ function CubeApp({
             </div>
           ))}
         </section>
-      </aside>
+      </section>
     </main>
   );
 }
