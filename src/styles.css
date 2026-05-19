@@ -227,7 +227,7 @@ small,
 .profile-card,
 .profile-hero,
 .profile-editor,
-.wca-panel,
+.profile-tabs,
 .feed-card,
 .timer-panel,
 .manual-log,
@@ -310,10 +310,43 @@ small,
   margin-top: 0;
 }
 
-.wca-panel {
+.profile-tabs {
   display: grid;
   gap: 12px;
   padding: 18px;
+}
+
+.profile-tab-list {
+  background: #edf5f0;
+  border: 1px solid #d3ded8;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 4px;
+}
+
+.profile-tab-list button {
+  background: transparent;
+  color: #5a655f;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 10px;
+}
+
+.profile-tab-list button.active,
+.profile-tab-list button:hover {
+  background: #17211d;
+  color: white;
+}
+
+.profile-tab-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-event-select {
+  max-width: 320px;
 }
 
 .wca-grid {
@@ -361,6 +394,62 @@ small,
   font-weight: 900;
   margin: 0;
   text-align: right;
+}
+
+.event-stats-list {
+  display: grid;
+  gap: 10px;
+}
+
+.event-stat-row {
+  align-items: center;
+  background: #edf5f0;
+  border: 1px solid #d3ded8;
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.event-stat-row small {
+  display: block;
+  margin-top: 4px;
+}
+
+.event-stat-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.event-stat-values span {
+  background: white;
+  border: 1px solid #d3ded8;
+  border-radius: 8px;
+  font-weight: 900;
+  padding: 8px 10px;
+}
+
+.event-stat-detail {
+  background: #edf5f0;
+  border: 1px solid #d3ded8;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.event-stat-detail h4 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.event-detail-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .secondary-button {
@@ -869,6 +958,28 @@ textarea {
   }
 
   .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .profile-tab-list {
+    grid-template-columns: 1fr;
+  }
+
+  .event-stat-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .event-stat-values {
+    justify-content: stretch;
+  }
+
+  .event-stat-values span {
+    flex: 1;
+    text-align: center;
+  }
+
+  .event-detail-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 

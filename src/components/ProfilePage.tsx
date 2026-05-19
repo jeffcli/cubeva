@@ -1,5 +1,15 @@
-import { Activity, Clock, Edit3, Flame, Medal, Trophy, UserPlus } from "lucide-react";
+import {
+  Activity,
+  Clock,
+  Edit3,
+  Flame,
+  Medal,
+  Trophy,
+  UserPlus,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 import type { AppSession, WcaPersonalBest } from "../database";
+import { wcaEvents } from "../scrambles";
 import { average, bestTime, getProfileStats } from "../solveUtils";
 import type { ProfileView } from "../types";
 import { Metric } from "./Metric";
@@ -34,6 +44,17 @@ export function ProfilePage({
   }) => void;
   onFollow: () => void;
 }) {
+  const [activeTab, setActiveTab] = useState<ProfileTab>("wca");
+  const [selectedEvent, setSelectedEvent] = useState("all");
+  const eventStats = useMemo(
+    () => getEventStats(profile.sessions),
+    [profile.sessions],
+  );
+  const selectedEventStats = useMemo(
+    () => eventStats.find((event) => event.puzzle === selectedEvent) ?? null,
+    [eventStats, selectedEvent],
+  );
+
   return (
     <>
       <section className="profile-hero">
@@ -122,64 +143,126 @@ export function ProfilePage({
 
       {message && <p className="session-message">{message}</p>}
 
-      <section className="stats-grid">
-        <Metric icon={<Trophy size={18} />} label="PB" value={stats.best} />
-        <Metric
-          icon={<Activity size={18} />}
-          label="Average"
-          value={stats.average}
-        />
-        <Metric
-          icon={<Clock size={18} />}
-          label="Sessions"
-          value={String(stats.sessionCount)}
-        />
-        <Metric
-          icon={<Flame size={18} />}
-          label="Solves"
-          value={String(stats.solveCount)}
-        />
-      </section>
-
-      {profile.wcaId && (
-        <section className="wca-panel">
-          <div className="section-head">
-            <h3>WCA personal bests</h3>
-            <span>{profile.wcaId}</span>
-          </div>
-          {profile.wcaPersonalBests.length === 0 ? (
-            <p className="empty-state">
-              WCA ID linked. Personal bests will appear after the WCA cache is
-              imported.
-            </p>
-          ) : (
-            <div className="wca-grid">
-              {profile.wcaPersonalBests.map((personalBest) => (
-                <WcaPersonalBestCard
-                  personalBest={personalBest}
-                  key={personalBest.eventId}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      <section className="feed profile-history">
-        <div className="section-head">
-          <h3>Recent sessions</h3>
-          <span>{stats.eventCount} events</span>
+      <section className="profile-tabs">
+        <div
+          className="profile-tab-list"
+          role="tablist"
+          aria-label="Profile details"
+        >
+          {profileTabs.map((tab) => (
+            <button
+              aria-selected={activeTab === tab.id}
+              className={activeTab === tab.id ? "active" : ""}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              role="tab"
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-        {profile.sessions.length === 0 && (
-          <p className="empty-state">No public sessions yet.</p>
+
+        {activeTab === "wca" && (
+          <div className="profile-tab-panel" role="tabpanel">
+            <div className="section-head">
+              <h3>WCA personal bests</h3>
+              <span>{profile.wcaId || "No WCA ID"}</span>
+            </div>
+            {!profile.wcaId ? (
+              <p className="empty-state">
+                Add a WCA ID to this profile to show official personal bests.
+              </p>
+            ) : profile.wcaPersonalBests.length === 0 ? (
+              <p className="empty-state">
+                WCA ID linked. Personal bests will appear after the WCA cache is
+                imported.
+              </p>
+            ) : (
+              <div className="wca-grid">
+                {profile.wcaPersonalBests.map((personalBest) => (
+                  <WcaPersonalBestCard
+                    personalBest={personalBest}
+                    key={personalBest.eventId}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         )}
-        {profile.sessions.map((session) => (
-          <ProfileSessionCard session={session} key={session.id} />
-        ))}
+
+        {activeTab === "events" && (
+          <div className="profile-tab-panel" role="tabpanel">
+            <div className="section-head">
+              <h3>Stats by event</h3>
+              <span>{stats.eventCount} events</span>
+            </div>
+            <label className="select-label profile-event-select">
+              Event
+              <select
+                value={selectedEvent}
+                onChange={(event) => setSelectedEvent(event.target.value)}
+              >
+                <option value="all">All events</option>
+                {wcaEvents.map((event) => (
+                  <option value={event.label} key={event.eventId}>
+                    {event.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {selectedEvent === "all" && eventStats.length === 0 ? (
+              <p className="empty-state">No event stats yet.</p>
+            ) : selectedEvent === "all" ? (
+              <div className="event-stats-list">
+                {eventStats.map((event) => (
+                  <EventStatRow event={event} key={event.puzzle} />
+                ))}
+              </div>
+            ) : selectedEventStats ? (
+              <EventStatDetail event={selectedEventStats} />
+            ) : (
+              <p className="empty-state">
+                No public sessions logged for {selectedEvent} yet.
+              </p>
+            )}
+          </div>
+        )}
+
+        {activeTab === "sessions" && (
+          <div className="profile-tab-panel" role="tabpanel">
+            <div className="section-head">
+              <h3>Recent sessions</h3>
+              <span>{profile.sessions.length} total</span>
+            </div>
+            {profile.sessions.length === 0 && (
+              <p className="empty-state">No public sessions yet.</p>
+            )}
+            {profile.sessions.map((session) => (
+              <ProfileSessionCard session={session} key={session.id} />
+            ))}
+          </div>
+        )}
       </section>
     </>
   );
 }
+
+type ProfileTab = "wca" | "events" | "sessions";
+
+const profileTabs: { id: ProfileTab; label: string }[] = [
+  { id: "wca", label: "WCA PBs" },
+  { id: "events", label: "Stats" },
+  { id: "sessions", label: "Recent sessions" },
+];
+
+type EventStats = {
+  puzzle: string;
+  sessionCount: number;
+  solveCount: number;
+  best: string;
+  average: string;
+};
 
 function WcaPersonalBestCard({
   personalBest,
@@ -195,11 +278,15 @@ function WcaPersonalBestCard({
       <dl>
         <div>
           <dt>Single</dt>
-          <dd>{formatWcaResult(personalBest.eventId, personalBest.bestSingle)}</dd>
+          <dd>
+            {formatWcaResult(personalBest.eventId, personalBest.bestSingle)}
+          </dd>
         </div>
         <div>
           <dt>Average</dt>
-          <dd>{formatWcaResult(personalBest.eventId, personalBest.bestAverage)}</dd>
+          <dd>
+            {formatWcaResult(personalBest.eventId, personalBest.bestAverage)}
+          </dd>
         </div>
         <div>
           <dt>World rank</dt>
@@ -234,6 +321,78 @@ function ProfileSessionCard({ session }: { session: AppSession }) {
       </div>
     </article>
   );
+}
+
+function EventStatRow({ event }: { event: EventStats }) {
+  return (
+    <article className="event-stat-row">
+      <div>
+        <strong>{event.puzzle}</strong>
+        <small>
+          {event.sessionCount} sessions · {event.solveCount} solves
+        </small>
+      </div>
+      <div className="event-stat-values">
+        <span>best {event.best}</span>
+        <span>avg {event.average}</span>
+      </div>
+    </article>
+  );
+}
+
+function EventStatDetail({ event }: { event: EventStats }) {
+  return (
+    <article className="event-stat-detail">
+      <div className="section-head">
+        <h4>{event.puzzle}</h4>
+        <span>{event.solveCount} solves</span>
+      </div>
+      <div className="event-detail-grid">
+        <Metric icon={<Trophy size={18} />} label="Best" value={event.best} />
+        <Metric
+          icon={<Activity size={18} />}
+          label="Average"
+          value={event.average}
+        />
+        <Metric
+          icon={<Clock size={18} />}
+          label="Sessions"
+          value={String(event.sessionCount)}
+        />
+        <Metric
+          icon={<Flame size={18} />}
+          label="Solves"
+          value={String(event.solveCount)}
+        />
+      </div>
+    </article>
+  );
+}
+
+function getEventStats(sessions: AppSession[]): EventStats[] {
+  const events = new Map<string, AppSession[]>();
+
+  for (const session of sessions) {
+    events.set(session.puzzle, [
+      ...(events.get(session.puzzle) ?? []),
+      session,
+    ]);
+  }
+
+  return [...events.entries()]
+    .map(([puzzle, eventSessions]) => {
+      const solves = eventSessions.flatMap((session) => session.solves);
+      return {
+        puzzle,
+        sessionCount: eventSessions.length,
+        solveCount: solves.length,
+        best: solves.length ? bestTime(solves) : "--",
+        average: solves.length ? average(solves) : "--",
+      };
+    })
+    .sort(
+      (a, b) => b.solveCount - a.solveCount || a.puzzle.localeCompare(b.puzzle),
+    );
 }
 
 function formatWcaResult(eventId: string, value: number | null) {

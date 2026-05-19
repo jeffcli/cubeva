@@ -168,10 +168,12 @@ function CubeApp({
   const startRef = useRef(0);
   const inspectionStartRef = useRef(0);
   const { displayName, username, initials } = displayProfile;
+  const userId = user?.id ?? null;
   const currentEvent = eventConfig(puzzle);
   const isManualOnlyEvent = currentEvent.manualOnly;
   const inspectionAvailable = currentEvent.inspection && !isManualOnlyEvent;
   const currentResultType = isManualOnlyEvent ? "moves" : "time";
+  const hasUnpublishedSolves = solves.length > 0;
 
   useEffect(() => {
     if (!inspectionAvailable && timerState === "inspection") {
@@ -207,6 +209,18 @@ function CubeApp({
     }, 50);
     return () => window.clearInterval(interval);
   }, [timerState]);
+
+  useEffect(() => {
+    function warnBeforeUnload(event: BeforeUnloadEvent) {
+      if (!hasUnpublishedSolves) return;
+
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [hasUnpublishedSolves]);
 
   useEffect(() => {
     let cancelled = false;
@@ -251,7 +265,6 @@ function CubeApp({
         return;
       }
 
-      setSolves([]);
       setSessionsLoading(true);
       setPeopleLoading(true);
       setSessionMessage("");
@@ -317,11 +330,11 @@ function CubeApp({
     return () => {
       cancelled = true;
     };
-  }, [demoMode, user]);
+  }, [demoMode, userId]);
 
   const selfProfile = useMemo<ProfileView>(
     () => ({
-      id: user?.id ?? "demo-user",
+      id: userId ?? "demo-user",
       displayName,
       username,
       initials,
@@ -341,7 +354,7 @@ function CubeApp({
       profileRecord?.bio,
       profileRecord?.wca_id,
       profileWcaPersonalBests,
-      user?.id,
+      userId,
       userSessions,
       username,
     ],
@@ -425,6 +438,19 @@ function CubeApp({
     setTimerState("running");
   }
 
+  useEffect(() => {
+    function handleTimerKeydown(event: KeyboardEvent) {
+      if (event.code !== "Space" || event.repeat) return;
+      if (activeView !== "timer" || isTypingTarget(event.target)) return;
+
+      event.preventDefault();
+      void toggleTimer();
+    }
+
+    window.addEventListener("keydown", handleTimerKeydown);
+    return () => window.removeEventListener("keydown", handleTimerKeydown);
+  }, [activeView, toggleTimer]);
+
   function addManualSolve() {
     const parsed = isManualOnlyEvent
       ? parseMoves(manualTime)
@@ -496,6 +522,14 @@ function CubeApp({
     setSolves([]);
     setSessionMessage("Demo session published locally.");
     setPublishing(false);
+  }
+
+  function confirmLeavingUnpublishedSession() {
+    if (!hasUnpublishedSolves) return true;
+
+    return window.confirm(
+      "Are you sure? Your current session has unpublished solves and progress will be lost.",
+    );
   }
 
   async function saveProfileEdits(event: React.FormEvent<HTMLFormElement>) {
@@ -668,7 +702,13 @@ function CubeApp({
             <p>Training feed for speedcubers</p>
           </div>
         </div>
-        <button className="sign-out" type="button" onClick={onSignOut}>
+        <button
+          className="sign-out"
+          type="button"
+          onClick={() => {
+            if (confirmLeavingUnpublishedSession()) onSignOut();
+          }}
+        >
           <LogOut size={17} /> {demoMode ? "Exit demo" : "Sign out"}
         </button>
 
@@ -982,5 +1022,16 @@ function CubeApp({
         </section>
       </section>
     </main>
+  );
+}
+
+function isTypingTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+
+  return (
+    target.isContentEditable ||
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.tagName === "SELECT"
   );
 }
