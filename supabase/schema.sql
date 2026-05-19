@@ -4,7 +4,24 @@ create table public.profiles (
   display_name text not null,
   avatar_url text,
   bio text,
+  wca_id text unique,
   created_at timestamptz default now() not null
+);
+
+create table public.wca_personal_bests (
+  wca_id text not null,
+  event_id text not null,
+  event_name text not null,
+  best_single integer,
+  best_average integer,
+  world_rank_single integer,
+  country_rank_single integer,
+  continent_rank_single integer,
+  world_rank_average integer,
+  country_rank_average integer,
+  continent_rank_average integer,
+  updated_at timestamptz default now() not null,
+  primary key (wca_id, event_id)
 );
 
 create table public.follows (
@@ -42,12 +59,17 @@ create index solves_session_created_idx on public.solves (session_id, created_at
 create index follows_following_idx on public.follows (following_id);
 
 alter table public.profiles enable row level security;
+alter table public.wca_personal_bests enable row level security;
 alter table public.follows enable row level security;
 alter table public.sessions enable row level security;
 alter table public.solves enable row level security;
 
 create policy "Profiles are visible to everyone"
   on public.profiles for select
+  using (true);
+
+create policy "WCA personal bests are visible to everyone"
+  on public.wca_personal_bests for select
   using (true);
 
 create policy "Users can update their own profile"

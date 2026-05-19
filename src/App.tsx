@@ -21,6 +21,7 @@ import {
   fetchProfile,
   fetchPublicSessionsForProfile,
   fetchUserSessions,
+  fetchWcaPersonalBests,
   getUserDisplay,
   errorMessage,
   saveSession,
@@ -31,6 +32,7 @@ import {
   type AppSolve,
   type Penalty,
   type SocialProfile,
+  type WcaPersonalBest,
 } from "./database";
 import { AuthScreen, AuthShell } from "./components/Auth";
 import { FeedPage } from "./components/FeedPage";
@@ -148,15 +150,17 @@ function CubeApp({
   const [peopleLoading, setPeopleLoading] = useState(false);
   const [sessionMessage, setSessionMessage] = useState("");
   const [publishing, setPublishing] = useState(false);
-  const [activeView, setActiveView] = useState<AppView>("timer");
+  const [activeView, setActiveView] = useState<AppView>("feed");
   const [selectedProfile, setSelectedProfile] = useState<ProfileView | null>(
     null,
   );
   const [profileRecord, setProfileRecord] = useState<AppProfile | null>(null);
+  const [profileWcaPersonalBests, setProfileWcaPersonalBests] = useState<WcaPersonalBest[]>([]);
   const [profileForm, setProfileForm] = useState({
     displayName: "",
     username: "",
     bio: "",
+    wcaId: "",
   });
   const [profileEditing, setProfileEditing] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -241,7 +245,9 @@ function CubeApp({
           displayName: getUserDisplay(null).displayName,
           username: getUserDisplay(null).username,
           bio: "Practicing consistency and building CubeVa.",
+          wcaId: "",
         });
+        setProfileWcaPersonalBests([]);
         return;
       }
 
@@ -275,13 +281,18 @@ function CubeApp({
                 .join("")
                 .slice(0, 2)
                 .toUpperCase() || "Y",
+            wcaId: profile.wca_id ?? "",
           });
           setProfileRecord(profile);
           setProfileForm({
             displayName: profileDisplay,
             username: profile.username,
             bio: profile.bio ?? "",
+            wcaId: profile.wca_id ?? "",
           });
+          setProfileWcaPersonalBests(
+            profile.wca_id ? await fetchWcaPersonalBests(profile.wca_id) : [],
+          );
         }
 
         setUserSessions(loadedSessions);
@@ -318,6 +329,8 @@ function CubeApp({
         profileRecord?.bio ||
         displayProfile.bio ||
         "Practicing consistency and building CubeVa.",
+      wcaId: profileRecord?.wca_id ?? displayProfile.wcaId ?? "",
+      wcaPersonalBests: profileWcaPersonalBests,
       sessions: userSessions,
       isSelf: true,
     }),
@@ -326,6 +339,8 @@ function CubeApp({
       displayProfile.bio,
       initials,
       profileRecord?.bio,
+      profileRecord?.wca_id,
+      profileWcaPersonalBests,
       user?.id,
       userSessions,
       username,
@@ -493,8 +508,10 @@ function CubeApp({
         displayName: profileForm.displayName,
         username: profileForm.username,
         bio: profileForm.bio,
+        wcaId: profileForm.wcaId,
       };
       setDisplayProfile(fakeProfile);
+      setProfileWcaPersonalBests([]);
       setProfileEditing(false);
       setProfileMessage("Demo profile updated locally.");
       return;
@@ -507,14 +524,20 @@ function CubeApp({
         displayName: profileForm.displayName,
         username: profileForm.username,
         bio: profileForm.bio,
+        wcaId: profileForm.wcaId,
       });
       const updatedDisplay = getUserDisplay(user, updated);
+      const wcaPersonalBests = updated.wca_id
+        ? await fetchWcaPersonalBests(updated.wca_id)
+        : [];
       setProfileRecord(updated);
+      setProfileWcaPersonalBests(wcaPersonalBests);
       setDisplayProfile(updatedDisplay);
       setProfileForm({
         displayName: updatedDisplay.displayName,
         username: updatedDisplay.username,
         bio: updated.bio ?? "",
+        wcaId: updated.wca_id ?? "",
       });
       setProfileEditing(false);
       setProfileMessage("Profile saved.");
@@ -529,11 +552,15 @@ function CubeApp({
 
   async function openCandidateProfile(person: FollowCandidate) {
     let sessions = person.sessions;
+    let wcaId = person.wcaId;
+    let wcaPersonalBests: WcaPersonalBest[] = [];
     if (user && !demoMode) {
       try {
         const profile = await fetchProfile(person.id);
         if (profile) {
+          wcaId = profile.wca_id ?? "";
           sessions = await fetchPublicSessionsForProfile(profile);
+          wcaPersonalBests = wcaId ? await fetchWcaPersonalBests(wcaId) : [];
         }
       } catch (error) {
         setProfileMessage(
@@ -550,6 +577,8 @@ function CubeApp({
       username: person.handle.replace("@", ""),
       initials: person.avatar,
       bio: person.bio,
+      wcaId,
+      wcaPersonalBests,
       following: person.following,
       sessions,
       isSelf: false,
@@ -645,18 +674,18 @@ function CubeApp({
 
         <nav className="nav-list" aria-label="Primary">
           <button
-            className={activeView === "timer" ? "active" : ""}
-            type="button"
-            onClick={() => setActiveView("timer")}
-          >
-            <Timer size={18} /> Timer
-          </button>
-          <button
             className={activeView === "feed" ? "active" : ""}
             type="button"
             onClick={() => setActiveView("feed")}
           >
             <Activity size={18} /> Feed
+          </button>
+          <button
+            className={activeView === "timer" ? "active" : ""}
+            type="button"
+            onClick={() => setActiveView("timer")}
+          >
+            <Timer size={18} /> Timer
           </button>
           <button
             className={activeView === "people" ? "active" : ""}
@@ -897,6 +926,7 @@ function CubeApp({
               displayName,
               username,
               bio: selfProfile.bio,
+              wcaId: selfProfile.wcaId,
             });
             setProfileEditing(true);
             setProfileMessage("");

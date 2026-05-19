@@ -52,6 +52,7 @@ export const candidates: SocialProfile[] = [
     average: "avg 16.84",
     following: false,
     bio: "Color-neutral 3x3 solver working on smoother F2L and calmer last layers.",
+    wcaId: "",
     sessions: [
       makeCandidateSession("Lena Ortiz", "LO", "3x3", "Evening lookahead block", [16840, 17220, 16190, 17980, 16550]),
       makeCandidateSession("Lena Ortiz", "LO", "2x2", "Quick layer drills", [5290, 4810, 5120, 4960, 5030]),
@@ -65,6 +66,7 @@ export const candidates: SocialProfile[] = [
     average: "avg 21.03",
     following: true,
     bio: "Casual cuber chasing sub-20 while keeping solves fun.",
+    wcaId: "",
     sessions: [
       makeCandidateSession("Sam Rivera", "SR", "3x3", "Sub-20 attempt set", [21030, 19840, 22450, 20580, 21710]),
       makeCandidateSession("Sam Rivera", "SR", "Pyraminx", "Tips-only practice", [8120, 7790, 8400, 7950, 7680]),
@@ -78,6 +80,7 @@ export const candidates: SocialProfile[] = [
     average: "avg 13.92",
     following: false,
     bio: "Cross planning nerd. Mostly 3x3, sometimes OH when the wrists cooperate.",
+    wcaId: "",
     sessions: [
       makeCandidateSession("Iris Zhou", "IZ", "3x3", "Fast cross planning", [13920, 14410, 13680, 14190, 13220]),
       makeCandidateSession("Iris Zhou", "IZ", "3x3 OH", "Controlled TPS set", [27910, 28640, 27120, 29500, 28220]),

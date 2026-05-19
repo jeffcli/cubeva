@@ -29,7 +29,23 @@ export type AppProfile = {
   display_name: string;
   username: string;
   bio: string | null;
+  wca_id: string | null;
   created_at: string;
+};
+
+export type WcaPersonalBest = {
+  wcaId: string;
+  eventId: string;
+  eventName: string;
+  bestSingle: number | null;
+  bestAverage: number | null;
+  worldRankSingle: number | null;
+  countryRankSingle: number | null;
+  continentRankSingle: number | null;
+  worldRankAverage: number | null;
+  countryRankAverage: number | null;
+  continentRankAverage: number | null;
+  updatedAt: string;
 };
 
 export type SocialProfile = {
@@ -40,8 +56,11 @@ export type SocialProfile = {
   average: string;
   following: boolean;
   bio: string;
+  wcaId: string;
   sessions: AppSession[];
 };
+
+const profileColumns = "id, display_name, username, bio, wca_id, created_at";
 
 export function errorMessage(error: unknown, fallback = "Something went wrong.") {
   if (error instanceof Error) return error.message;
@@ -75,6 +94,21 @@ type SessionRow = {
   solves: SolveRow[];
 };
 
+type WcaPersonalBestRow = {
+  wca_id: string;
+  event_id: string;
+  event_name: string;
+  best_single: number | null;
+  best_average: number | null;
+  world_rank_single: number | null;
+  country_rank_single: number | null;
+  continent_rank_single: number | null;
+  world_rank_average: number | null;
+  country_rank_average: number | null;
+  continent_rank_average: number | null;
+  updated_at: string;
+};
+
 export function getUserDisplay(user: User | null, profile?: AppProfile | null) {
   const displayName = String(
     profile?.display_name ||
@@ -95,7 +129,7 @@ export function getUserDisplay(user: User | null, profile?: AppProfile | null) {
       .slice(0, 2)
       .toUpperCase() || "Y";
 
-  return { displayName, username, initials, bio: profile?.bio ?? "" };
+  return { displayName, username, initials, bio: profile?.bio ?? "", wcaId: profile?.wca_id ?? "" };
 }
 
 export async function fetchProfile(userId: string): Promise<AppProfile | null> {
@@ -103,7 +137,7 @@ export async function fetchProfile(userId: string): Promise<AppProfile | null> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, username, bio, created_at")
+    .select(profileColumns)
     .eq("id", userId)
     .single();
 
@@ -116,13 +150,17 @@ export async function updateProfile({
   displayName,
   username,
   bio,
+  wcaId,
 }: {
   userId: string;
   displayName: string;
   username: string;
   bio: string;
+  wcaId: string;
 }): Promise<AppProfile> {
   if (!supabase) throw new Error("Supabase is not configured.");
+
+  const normalizedWcaId = normalizeWcaId(wcaId);
 
   const { data, error } = await supabase
     .from("profiles")
@@ -130,13 +168,33 @@ export async function updateProfile({
       display_name: displayName,
       username,
       bio,
+      wca_id: normalizedWcaId,
     })
     .eq("id", userId)
-    .select("id, display_name, username, bio, created_at")
+    .select(profileColumns)
     .single();
 
   if (error) throw error;
   return data;
+}
+
+export async function fetchWcaPersonalBests(wcaId: string): Promise<WcaPersonalBest[]> {
+  if (!supabase) return [];
+
+  const normalizedWcaId = normalizeWcaId(wcaId);
+  if (!normalizedWcaId) return [];
+
+  const { data, error } = await supabase
+    .from("wca_personal_bests")
+    .select(
+      "wca_id, event_id, event_name, best_single, best_average, world_rank_single, country_rank_single, continent_rank_single, world_rank_average, country_rank_average, continent_rank_average, updated_at",
+    )
+    .eq("wca_id", normalizedWcaId)
+    .order("event_name", { ascending: true });
+
+  if (error) throw error;
+
+  return ((data as WcaPersonalBestRow[] | null) ?? []).map(mapWcaPersonalBestRow);
 }
 
 export async function fetchUserSessions(user: User): Promise<AppSession[]> {
@@ -170,6 +228,7 @@ export async function fetchDiscoverProfiles(userId: string): Promise<SocialProfi
       average: sessions.length ? `avg ${averageLabel(sessions)}` : "no sessions",
       following: followingIds.has(profile.id),
       bio: profile.bio ?? "",
+      wcaId: profile.wca_id ?? "",
       sessions,
     };
   });
@@ -240,7 +299,7 @@ async function fetchProfilesExcept(userId: string): Promise<AppProfile[]> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, username, bio, created_at")
+    .select(profileColumns)
     .neq("id", userId)
     .order("username", { ascending: true })
     .limit(25);
@@ -254,7 +313,7 @@ async function fetchProfilesByIds(ids: string[]): Promise<AppProfile[]> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, username, bio, created_at")
+    .select(profileColumns)
     .in("id", ids);
 
   if (error) throw error;
@@ -412,6 +471,28 @@ function mapSessionRow(session: SessionRow, user: string, avatar: string): AppSe
 
 function parseSolveResultType(solve: SolveRow): "time" | "moves" {
   return solve.notes?.startsWith("fmc_moves:") ? "moves" : "time";
+}
+
+function normalizeWcaId(wcaId: string) {
+  const trimmed = wcaId.trim().toUpperCase();
+  return trimmed.length ? trimmed : null;
+}
+
+function mapWcaPersonalBestRow(row: WcaPersonalBestRow): WcaPersonalBest {
+  return {
+    wcaId: row.wca_id,
+    eventId: row.event_id,
+    eventName: row.event_name,
+    bestSingle: row.best_single,
+    bestAverage: row.best_average,
+    worldRankSingle: row.world_rank_single,
+    countryRankSingle: row.country_rank_single,
+    continentRankSingle: row.continent_rank_single,
+    worldRankAverage: row.world_rank_average,
+    countryRankAverage: row.country_rank_average,
+    continentRankAverage: row.continent_rank_average,
+    updatedAt: row.updated_at,
+  };
 }
 
 function averageLabel(sessions: AppSession[]) {

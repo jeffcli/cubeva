@@ -227,6 +227,7 @@ small,
 .profile-card,
 .profile-hero,
 .profile-editor,
+.wca-panel,
 .feed-card,
 .timer-panel,
 .manual-log,
@@ -269,6 +270,13 @@ small,
   margin: 0;
 }
 
+.profile-hero .wca-id {
+  color: #227064;
+  font-size: 0.88rem;
+  font-weight: 900;
+  margin-top: 4px;
+}
+
 .profile-identity,
 .profile-actions {
   align-items: center;
@@ -300,6 +308,59 @@ small,
 
 .profile-history {
   margin-top: 0;
+}
+
+.wca-panel {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.wca-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.wca-card {
+  background: #edf5f0;
+  border: 1px solid #d3ded8;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.wca-card-head {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.wca-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.wca-card dl div {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wca-card dt {
+  color: #5a655f;
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.wca-card dd {
+  font-weight: 900;
+  margin: 0;
+  text-align: right;
 }
 
 .secondary-button {

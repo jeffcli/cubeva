@@ -12,6 +12,7 @@ CubeVa is a starter MVP for a Strava-style speedcubing social app.
 - Supabase-ready schema for profiles, follows, sessions, and solves
 - Supabase auth plus persisted sessions/solves for signed-in users
 - Profile view with PBs, recent sessions, editable self profile, and public demo profiles
+- Optional WCA ID on profiles with a cache table for official WCA personal bests
 - Real Supabase follow/unfollow plus following-feed queries for signed-in users
 - Cubing-focused timer features: generated scrambles, inspection, Ao5/Ao12, penalties, delete, and pasted time import
 
@@ -65,7 +66,35 @@ Demo mode still keeps everything local in browser state.
 
 ## Profiles
 
-The Profile tab shows a user summary, PB, average, total sessions, total solves, and recent sessions. Signed-in users can edit their display name, username, and bio, which updates the `profiles` table. The People panel currently includes demo public profiles; the next backend step is to replace those with real profile search and persisted follows.
+The Profile tab shows a user summary, PB, average, total sessions, total solves, linked WCA personal bests, and recent sessions. Signed-in users can edit their display name, username, bio, and WCA ID, which updates the `profiles` table. The People panel currently includes demo public profiles; the next backend step is to replace those with real profile search and persisted follows.
+
+Existing Supabase projects should run `supabase/add-wca-personal-bests.sql` once in the SQL editor. New projects can run the full `supabase/schema.sql`.
+
+WCA personal bests are read from `wca_personal_bests`, keyed by `wca_id` and `event_id`. The app displays the section when a profile has a WCA ID; rows are populated by the local importer below.
+
+## Import WCA personal bests
+
+The importer reads WCA person ranking data from the WST-endorsed unofficial WCA API, then upserts those rows into Supabase.
+
+Add your service role key to `.env.local` for local imports only:
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+Find it in Supabase under Project Settings > API > service_role key. Keep this key out of browser code and never commit it.
+
+Import one WCA ID:
+
+```bash
+npm run import:wca -- 2019SMIT01
+```
+
+Import every profile that has a `wca_id`:
+
+```bash
+npm run import:wca -- --all
+```
 
 ## Social feed
 
