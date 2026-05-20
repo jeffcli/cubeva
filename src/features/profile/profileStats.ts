@@ -1,5 +1,5 @@
-import type { AppSession } from "./database";
-import { average, bestTime } from "./solveUtils";
+import type { AppSession } from "../../data/database";
+import { average, bestTime } from "../../utils/solveUtils";
 
 export type EventStats = {
   puzzle: string;

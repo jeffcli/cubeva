@@ -1,5 +1,5 @@
 import { Activity, Clock, Flame, Trophy } from "lucide-react";
-import type { EventStats } from "../profileStats";
+import type { EventStats } from "../features/profile/profileStats";
 import { Metric } from "./Metric";
 
 export function EventStatRow({ event }: { event: EventStats }) {

@@ -1,10 +1,10 @@
 import { Edit3, UserPlus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { AppSession } from "../database";
-import { getEventStats, getWeeklyProgress } from "../profileStats";
-import { wcaEvents } from "../scrambles";
-import { getProfileStats } from "../solveUtils";
-import type { ProfileView } from "../types";
+import { wcaEvents } from "../cubing/scrambles";
+import type { AppSession } from "../data/database";
+import { getEventStats, getWeeklyProgress } from "../features/profile/profileStats";
+import type { ProfileView } from "../types/app";
+import { getProfileStats } from "../utils/solveUtils";
 import { WeeklyProgressChart } from "./ProfileCharts";
 import { ProfileSessionCard } from "./ProfileSessionCard";
 import { WcaPersonalBestCard } from "./WcaPersonalBestCard";
@@ -238,7 +238,6 @@ export function ProfilePage({
               </select>
             </label>
             <WeeklyProgressChart
-              eventLabel={selectedEvent === "all" ? "All events" : selectedEvent}
               onSelectDay={setSelectedDayKey}
               progress={weeklyProgress}
               selectedDayKey={selectedWeeklyDay?.key ?? null}

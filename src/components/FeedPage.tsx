@@ -1,6 +1,6 @@
 import { Heart, MessageCircle, Timer, Trophy } from "lucide-react";
-import type { AppSession } from "../database";
-import { average, bestTime, formatSolveResult } from "../solveUtils";
+import type { AppSession } from "../data/database";
+import { average, bestTime, formatSolveResult } from "../utils/solveUtils";
 
 export function FeedPage({
   sessions,

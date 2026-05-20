@@ -1,12 +1,10 @@
-import type { WeeklyProgress } from "../profileStats";
+import type { WeeklyProgress } from "../features/profile/profileStats";
 
 export function WeeklyProgressChart({
-  eventLabel,
   onSelectDay,
   progress,
   selectedDayKey,
 }: {
-  eventLabel: string;
   onSelectDay: (dayKey: string) => void;
   progress: WeeklyProgress;
   selectedDayKey: string | null;

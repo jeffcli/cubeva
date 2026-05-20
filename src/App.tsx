@@ -15,6 +15,11 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Session as AuthSession, User } from "@supabase/supabase-js";
+import { AuthScreen, AuthShell } from "./components/Auth";
+import { FeedPage } from "./components/FeedPage";
+import { Metric } from "./components/Metric";
+import { ProfilePage } from "./components/ProfilePage";
+import { eventConfig, generateScramble, wcaEvents } from "./cubing/scrambles";
 import {
   deleteSession,
   fetchDiscoverProfiles,
@@ -34,14 +39,10 @@ import {
   type Penalty,
   type SocialProfile,
   type WcaPersonalBest,
-} from "./database";
-import { AuthScreen, AuthShell } from "./components/Auth";
-import { FeedPage } from "./components/FeedPage";
-import { formatSessionTimestamp } from "./dateUtils";
-import { Metric } from "./components/Metric";
-import { ProfilePage } from "./components/ProfilePage";
-import { eventConfig, generateScramble, wcaEvents } from "./scrambles";
-import { candidates, initialSolves, starterSessions } from "./mockData";
+} from "./data/database";
+import { candidates, initialSolves, starterSessions } from "./data/mockData";
+import { isSupabaseConfigured, supabase } from "./services/supabase";
+import { formatSessionTimestamp } from "./utils/dateUtils";
 import {
   average,
   averageOf,
@@ -54,9 +55,8 @@ import {
   parseMoves,
   parseTimeToMs,
   sampleScrambles,
-} from "./solveUtils";
-import type { AppView, ProfileView, TimerState } from "./types";
-import { isSupabaseConfigured, supabase } from "./supabase";
+} from "./utils/solveUtils";
+import type { AppView, ProfileView, TimerState } from "./types/app";
 
 type FollowCandidate = SocialProfile;
 

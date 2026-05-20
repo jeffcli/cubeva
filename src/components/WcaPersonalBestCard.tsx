@@ -1,6 +1,6 @@
 import { Medal } from "lucide-react";
-import type { WcaPersonalBest } from "../database";
-import { formatRank, formatWcaResult } from "../profileStats";
+import type { WcaPersonalBest } from "../data/database";
+import { formatRank, formatWcaResult } from "../features/profile/profileStats";
 
 export function WcaPersonalBestCard({
   personalBest,

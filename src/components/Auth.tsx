@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { isSupabaseConfigured, supabase } from "../supabase";
+import { isSupabaseConfigured, supabase } from "../services/supabase";
 
 export function AuthScreen({ onDemo }: { onDemo: () => void }) {
   const [mode, setMode] = useState<"signin" | "signup">("signup");

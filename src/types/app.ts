@@ -1,4 +1,4 @@
-import type { AppSession, WcaPersonalBest } from "./database";
+import type { AppSession, WcaPersonalBest } from "../data/database";
 
 export type AppView = "timer" | "feed" | "people" | "profile";
 export type TimerState = "ready" | "inspection" | "running";

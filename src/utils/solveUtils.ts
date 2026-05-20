@@ -1,4 +1,4 @@
-import type { AppSession, AppSolve, Penalty } from "./database";
+import type { AppSession, AppSolve, Penalty } from "../data/database";
 
 export const sampleScrambles = [
   "R U R' U' F2 D L2 U R2 F' U2",

@@ -1,6 +1,6 @@
 import type { AppSession, AppSolve, SocialProfile } from "./database";
-import { formatSessionTimestamp } from "./dateUtils";
-import { makeSolve } from "./solveUtils";
+import { formatSessionTimestamp } from "../utils/dateUtils";
+import { makeSolve } from "../utils/solveUtils";
 
 const now = Date.now();
 const lunchSessionCreatedAt = new Date(now - 1000 * 60 * 45).toISOString();
