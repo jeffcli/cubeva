@@ -349,6 +349,205 @@ small,
   max-width: 320px;
 }
 
+.profile-chart-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+}
+
+.weekly-progress-card {
+  background: #fffaf1;
+  border: 1px solid #e1dbce;
+  border-radius: 8px;
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  padding: 18px;
+}
+
+.weekly-progress-card h4 {
+  font-size: 1.45rem;
+  margin: 0;
+}
+
+.weekly-progress-card p {
+  color: #5a655f;
+  font-weight: 900;
+  margin: 4px 0 0;
+}
+
+.weekly-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.weekly-summary div {
+  border-right: 1px solid #d8d1c5;
+  display: grid;
+  gap: 4px;
+}
+
+.weekly-summary div:last-child {
+  border-right: 0;
+}
+
+.weekly-summary span {
+  color: #5a655f;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.weekly-summary strong {
+  font-size: clamp(1.55rem, 4vw, 2.7rem);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.weekly-chart-wrap {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.weekly-chart {
+  display: block;
+  height: auto;
+  overflow: visible;
+  width: 100%;
+}
+
+.weekly-grid-line {
+  stroke: #ddd8d0;
+  stroke-width: 1;
+}
+
+.weekly-grid-line.vertical {
+  opacity: 0.72;
+}
+
+.weekly-axis-label {
+  fill: #5a655f;
+  font-size: 13px;
+}
+
+.weekly-axis-label.day {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.weekly-area {
+  fill: url("#weeklySolveFill");
+}
+
+.weekly-line {
+  fill: none;
+  stroke: #f05a24;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 5;
+}
+
+.weekly-point {
+  fill: #fffaf1;
+  stroke: #f05a24;
+  stroke-width: 5;
+}
+
+.weekly-point-button {
+  cursor: pointer;
+  outline: none;
+}
+
+.weekly-point-button:focus .weekly-hit-target,
+.weekly-point-button:hover .weekly-hit-target {
+  opacity: 0.12;
+}
+
+.weekly-point.selected {
+  fill: #f05a24;
+}
+
+.weekly-hit-target {
+  fill: #f05a24;
+  opacity: 0;
+}
+
+.weekly-current-line {
+  stroke: #f05a24;
+  stroke-width: 4;
+}
+
+.weekly-current-glow {
+  fill: #f05a24;
+  opacity: 0.18;
+}
+
+.weekly-current-point {
+  fill: #f05a24;
+  stroke: #f05a24;
+}
+
+.weekly-current-label {
+  fill: #f05a24;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.profile-chart-card {
+  background: #edf5f0;
+  border: 1px solid #d3ded8;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.profile-chart-card h4 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.solve-bar-chart {
+  display: grid;
+  gap: 9px;
+}
+
+.solve-bar-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(58px, 92px) minmax(0, 1fr) 32px;
+}
+
+.solve-bar-row span {
+  color: #5a655f;
+  font-size: 0.78rem;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.solve-bar-row strong {
+  font-size: 0.84rem;
+  text-align: right;
+}
+
+.solve-bar-track {
+  background: white;
+  border: 1px solid #d3ded8;
+  border-radius: 8px;
+  height: 12px;
+  overflow: hidden;
+}
+
+.solve-bar-fill {
+  background: #39a48f;
+  border-radius: inherit;
+  height: 100%;
+}
+
 .wca-grid {
   display: grid;
   gap: 10px;
@@ -432,6 +631,19 @@ small,
   padding: 8px 10px;
 }
 
+.delete-session-button {
+  background: #fff2ed;
+  color: #b4331f;
+  justify-self: start;
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.delete-session-button:hover {
+  background: #e0482f;
+  color: white;
+}
+
 .event-stat-detail {
   background: #edf5f0;
   border: 1px solid #d3ded8;
@@ -502,6 +714,11 @@ small,
   align-items: center;
   display: flex;
   gap: 12px;
+}
+
+.feed-author strong,
+.feed-author small {
+  display: block;
 }
 
 .topbar {
@@ -963,6 +1180,25 @@ textarea {
 
   .profile-tab-list {
     grid-template-columns: 1fr;
+  }
+
+  .profile-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .weekly-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .weekly-summary div {
+    border-bottom: 1px solid #d8d1c5;
+    border-right: 0;
+    padding-bottom: 10px;
+  }
+
+  .weekly-summary div:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
   }
 
   .event-stat-row {

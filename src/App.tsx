@@ -16,6 +16,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Session as AuthSession, User } from "@supabase/supabase-js";
 import {
+  deleteSession,
   fetchDiscoverProfiles,
   fetchFollowingFeed,
   fetchProfile,
@@ -36,6 +37,7 @@ import {
 } from "./database";
 import { AuthScreen, AuthShell } from "./components/Auth";
 import { FeedPage } from "./components/FeedPage";
+import { formatSessionTimestamp } from "./dateUtils";
 import { Metric } from "./components/Metric";
 import { ProfilePage } from "./components/ProfilePage";
 import { eventConfig, generateScramble, wcaEvents } from "./scrambles";
@@ -508,13 +510,15 @@ function CubeApp({
       return;
     }
 
+    const createdAt = new Date().toISOString();
     const session: AppSession = {
       id: crypto.randomUUID(),
       user: displayName,
       avatar: initials,
       puzzle,
       title: `${puzzle} practice session`,
-      createdAt: "Just now",
+      createdAt: formatSessionTimestamp(createdAt),
+      createdAtSort: createdAt,
       liked: false,
       solves,
     };
@@ -522,6 +526,37 @@ function CubeApp({
     setSolves([]);
     setSessionMessage("Demo session published locally.");
     setPublishing(false);
+  }
+
+  async function deletePublishedSession(sessionId: string) {
+    const session = userSessions.find((item) => item.id === sessionId);
+    const label = session ? `"${session.title}"` : "this session";
+
+    if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return;
+
+    setProfileMessage("");
+
+    if (user && !demoMode) {
+      try {
+        await deleteSession(sessionId);
+      } catch (error) {
+        setProfileMessage(errorMessage(error, "Could not delete session."));
+        return;
+      }
+    }
+
+    setUserSessions((current) =>
+      current.filter((item) => item.id !== sessionId),
+    );
+    setSelectedProfile((current) =>
+      current?.isSelf
+        ? {
+            ...current,
+            sessions: current.sessions.filter((item) => item.id !== sessionId),
+          }
+        : current,
+    );
+    setProfileMessage("Session deleted.");
   }
 
   function confirmLeavingUnpublishedSession() {
@@ -975,6 +1010,7 @@ function CubeApp({
           onSave={saveProfileEdits}
           onFormChange={setProfileForm}
           onFollow={toggleSelectedFollow}
+          onDeleteSession={deletePublishedSession}
         />
       </section>
 

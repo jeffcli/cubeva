@@ -1,4 +1,5 @@
 import type { User } from "@supabase/supabase-js";
+import { formatSessionTimestamp } from "./dateUtils";
 import { supabase } from "./supabase";
 
 export type Penalty = "ok" | "+2" | "dnf";
@@ -400,7 +401,7 @@ export async function saveSession({
     avatar: display.initials,
     puzzle: session.puzzle,
     title: session.title,
-    createdAt: formatSessionDate(session.created_at),
+    createdAt: formatSessionTimestamp(session.created_at),
     createdAtSort: session.created_at,
     liked: false,
     solves: ((savedSolves as SolveRow[] | null) ?? []).map((solve) => ({
@@ -412,6 +413,17 @@ export async function saveSession({
       resultType: parseSolveResultType(solve),
     })),
   };
+}
+
+export async function deleteSession(sessionId: string) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const { error } = await supabase
+    .from("sessions")
+    .delete()
+    .eq("id", sessionId);
+
+  if (error) throw new Error(errorMessage(error, "Could not delete session."));
 }
 
 async function ensureProfile(user: User) {
@@ -438,17 +450,6 @@ async function ensureProfile(user: User) {
   if (error) throw new Error(errorMessage(error, "Could not create profile."));
 }
 
-function formatSessionDate(value: string) {
-  const date = new Date(value);
-  const now = new Date();
-
-  if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  }
-
-  return date.toLocaleDateString([], { month: "short", day: "numeric" });
-}
-
 function mapSessionRow(session: SessionRow, user: string, avatar: string): AppSession {
   return {
     id: session.id,
@@ -456,7 +457,8 @@ function mapSessionRow(session: SessionRow, user: string, avatar: string): AppSe
     avatar,
     puzzle: session.puzzle,
     title: session.title,
-    createdAt: formatSessionDate(session.created_at),
+    createdAt: formatSessionTimestamp(session.created_at),
+    createdAtSort: session.created_at,
     liked: false,
     solves: session.solves.map((solve) => ({
       id: solve.id,

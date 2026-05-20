@@ -4,10 +4,11 @@ import {
   Edit3,
   Flame,
   Medal,
+  Trash2,
   Trophy,
   UserPlus,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AppSession, WcaPersonalBest } from "../database";
 import { wcaEvents } from "../scrambles";
 import { average, bestTime, getProfileStats } from "../solveUtils";
@@ -26,6 +27,7 @@ export function ProfilePage({
   onSave,
   onFormChange,
   onFollow,
+  onDeleteSession,
 }: {
   profile: ProfileView;
   stats: ReturnType<typeof getProfileStats>;
@@ -43,17 +45,36 @@ export function ProfilePage({
     wcaId: string;
   }) => void;
   onFollow: () => void;
+  onDeleteSession: (sessionId: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<ProfileTab>("wca");
   const [selectedEvent, setSelectedEvent] = useState("all");
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const eventStats = useMemo(
     () => getEventStats(profile.sessions),
     [profile.sessions],
+  );
+  const weeklyProgress = useMemo(
+    () =>
+      getWeeklyProgress(
+        selectedEvent === "all"
+          ? profile.sessions
+          : profile.sessions.filter((session) => session.puzzle === selectedEvent),
+      ),
+    [profile.sessions, selectedEvent],
   );
   const selectedEventStats = useMemo(
     () => eventStats.find((event) => event.puzzle === selectedEvent) ?? null,
     [eventStats, selectedEvent],
   );
+  const selectedWeeklyDay =
+    weeklyProgress.days.find((day) => day.key === selectedDayKey) ??
+    weeklyProgress.days.at(-1) ??
+    null;
+
+  useEffect(() => {
+    setSelectedDayKey(null);
+  }, [selectedEvent, profile.id]);
 
   return (
     <>
@@ -197,6 +218,23 @@ export function ProfilePage({
               <h3>Stats by event</h3>
               <span>{stats.eventCount} events</span>
             </div>
+            <div className="profile-chart-grid">
+              <WeeklyProgressChart
+                eventLabel={selectedEvent === "all" ? "All events" : selectedEvent}
+                onSelectDay={setSelectedDayKey}
+                progress={weeklyProgress}
+                selectedDayKey={selectedWeeklyDay?.key ?? null}
+              />
+              <SolveBarChart
+                bars={eventStats.map((event) => ({
+                  key: event.puzzle,
+                  label: event.puzzle,
+                  value: event.solveCount,
+                }))}
+                emptyLabel="No event volume yet."
+                title="Solves by event"
+              />
+            </div>
             <label className="select-label profile-event-select">
               Event
               <select
@@ -239,7 +277,12 @@ export function ProfilePage({
               <p className="empty-state">No public sessions yet.</p>
             )}
             {profile.sessions.map((session) => (
-              <ProfileSessionCard session={session} key={session.id} />
+              <ProfileSessionCard
+                canDelete={profile.isSelf}
+                onDeleteSession={onDeleteSession}
+                session={session}
+                key={session.id}
+              />
             ))}
           </div>
         )}
@@ -262,6 +305,21 @@ type EventStats = {
   solveCount: number;
   best: string;
   average: string;
+};
+
+type ChartBar = {
+  key: string;
+  label: string;
+  eventCount?: number;
+  sessionCount?: number;
+  value: number;
+};
+
+type WeeklyProgress = {
+  days: ChartBar[];
+  totalSolves: number;
+  sessionCount: number;
+  eventCount: number;
 };
 
 function WcaPersonalBestCard({
@@ -302,16 +360,22 @@ function WcaPersonalBestCard({
   );
 }
 
-function ProfileSessionCard({ session }: { session: AppSession }) {
+function ProfileSessionCard({
+  canDelete,
+  onDeleteSession,
+  session,
+}: {
+  canDelete: boolean;
+  onDeleteSession: (sessionId: string) => void;
+  session: AppSession;
+}) {
   return (
     <article className="feed-item">
       <div className="feed-author">
         <div className="avatar">{session.avatar}</div>
         <div>
           <strong>{session.title}</strong>
-          <small>
-            {session.createdAt} · {session.puzzle}
-          </small>
+          <small>{session.createdAt}</small>
         </div>
       </div>
       <div className="feed-stats">
@@ -319,6 +383,15 @@ function ProfileSessionCard({ session }: { session: AppSession }) {
         <span>best {bestTime(session.solves)}</span>
         <span>{session.solves.length} solves</span>
       </div>
+      {canDelete && (
+        <button
+          className="delete-session-button"
+          type="button"
+          onClick={() => onDeleteSession(session.id)}
+        >
+          <Trash2 size={16} /> Delete session
+        </button>
+      )}
     </article>
   );
 }
@@ -369,6 +442,233 @@ function EventStatDetail({ event }: { event: EventStats }) {
   );
 }
 
+function WeeklyProgressChart({
+  eventLabel,
+  onSelectDay,
+  progress,
+  selectedDayKey,
+}: {
+  eventLabel: string;
+  onSelectDay: (dayKey: string) => void;
+  progress: WeeklyProgress;
+  selectedDayKey: string | null;
+}) {
+  const chartWidth = 620;
+  const chartHeight = 210;
+  const padding = { top: 22, right: 22, bottom: 34, left: 44 };
+  const plotWidth = chartWidth - padding.left - padding.right;
+  const plotHeight = chartHeight - padding.top - padding.bottom;
+  const selectedDay =
+    progress.days.find((day) => day.key === selectedDayKey) ??
+    progress.days.at(-1) ??
+    null;
+  const maxValue = Math.max(...progress.days.map((day) => day.value), 1);
+  const points = progress.days.map((day, index) => {
+    const x =
+      padding.left +
+      (progress.days.length === 1
+        ? plotWidth
+        : (index / (progress.days.length - 1)) * plotWidth);
+    const y = padding.top + plotHeight - (day.value / maxValue) * plotHeight;
+    return { x, y, day };
+  });
+  const linePath = points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+    .join(" ");
+  const areaPath = `${linePath} L ${padding.left + plotWidth} ${padding.top + plotHeight} L ${padding.left} ${padding.top + plotHeight} Z`;
+  const selectedPoint =
+    points.find((point) => point.day.key === selectedDay?.key) ?? points.at(-1);
+
+  return (
+    <article className="weekly-progress-card">
+      <div>
+        <h4>This week</h4>
+        <p>{eventLabel}</p>
+      </div>
+      <div className="weekly-summary">
+        <div>
+          <span>Solves</span>
+          <strong>{selectedDay?.value ?? 0}</strong>
+        </div>
+        <div>
+          <span>Sessions</span>
+          <strong>{selectedDay?.sessionCount ?? 0}</strong>
+        </div>
+        <div>
+          <span>Events</span>
+          <strong>{selectedDay?.eventCount ?? 0}</strong>
+        </div>
+      </div>
+      <div className="weekly-chart-wrap">
+        <svg
+          className="weekly-chart"
+          role="img"
+          aria-label={`Last 7 days: ${progress.totalSolves} solves`}
+          viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+        >
+          <defs>
+            <linearGradient id="weeklySolveFill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#f06d2f" stopOpacity="0.32" />
+              <stop offset="100%" stopColor="#f06d2f" stopOpacity="0.04" />
+            </linearGradient>
+          </defs>
+          {[0, 0.5, 1].map((ratio) => {
+            const y = padding.top + plotHeight - ratio * plotHeight;
+            return (
+              <g key={ratio}>
+                <line
+                  className="weekly-grid-line"
+                  x1={padding.left}
+                  x2={padding.left + plotWidth}
+                  y1={y}
+                  y2={y}
+                />
+                <text className="weekly-axis-label" x={8} y={y + 5}>
+                  {Math.round(maxValue * ratio)}
+                </text>
+              </g>
+            );
+          })}
+          {progress.days.map((day, index) => {
+            const x =
+              padding.left +
+              (progress.days.length === 1
+                ? plotWidth
+                : (index / (progress.days.length - 1)) * plotWidth);
+            return (
+              <g key={day.label}>
+                <line
+                  className="weekly-grid-line vertical"
+                  x1={x}
+                  x2={x}
+                  y1={padding.top}
+                  y2={padding.top + plotHeight}
+                />
+                <text
+                  className="weekly-axis-label day"
+                  textAnchor="middle"
+                  x={x}
+                  y={chartHeight - 8}
+                >
+                  {day.label}
+                </text>
+              </g>
+            );
+          })}
+          <path className="weekly-area" d={areaPath} />
+          <path className="weekly-line" d={linePath} />
+          {points.map((point) => (
+            <g
+              className="weekly-point-button"
+              key={point.day.key}
+              onClick={() => onSelectDay(point.day.key)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelectDay(point.day.key);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <circle
+                className={
+                  point.day.key === selectedPoint?.day.key
+                    ? "weekly-point selected"
+                    : "weekly-point"
+                }
+                cx={point.x}
+                cy={point.y}
+                r="6"
+              />
+              <circle
+                className="weekly-hit-target"
+                cx={point.x}
+                cy={point.y}
+                r="18"
+              />
+            </g>
+          ))}
+          {selectedPoint && (
+            <>
+              <line
+                className="weekly-current-line"
+                x1={selectedPoint.x}
+                x2={selectedPoint.x}
+                y1={padding.top}
+                y2={padding.top + plotHeight}
+              />
+              <circle
+                className="weekly-current-glow"
+                cx={selectedPoint.x}
+                cy={selectedPoint.y}
+                r="20"
+              />
+              <circle
+                className="weekly-current-point"
+                cx={selectedPoint.x}
+                cy={selectedPoint.y}
+                r="10"
+              />
+              <text
+                className="weekly-current-label"
+                textAnchor="end"
+                x={selectedPoint.x}
+                y={padding.top - 8}
+              >
+                {selectedPoint.day.value} solves
+              </text>
+            </>
+          )}
+        </svg>
+      </div>
+    </article>
+  );
+}
+
+function SolveBarChart({
+  bars,
+  emptyLabel,
+  title,
+}: {
+  bars: ChartBar[];
+  emptyLabel: string;
+  title: string;
+}) {
+  const maxValue = Math.max(...bars.map((bar) => bar.value), 0);
+
+  return (
+    <article className="profile-chart-card">
+      <div className="section-head">
+        <h4>{title}</h4>
+        <span>{maxValue ? `${maxValue} max` : "No data"}</span>
+      </div>
+      {bars.length === 0 ? (
+        <p className="empty-state">{emptyLabel}</p>
+      ) : (
+        <div className="solve-bar-chart">
+          {bars.map((bar) => (
+            <div
+              className="solve-bar-row"
+              key={bar.key}
+              aria-label={`${bar.label}: ${bar.value} solves`}
+            >
+              <span>{bar.label}</span>
+              <div className="solve-bar-track">
+                <div
+                  className="solve-bar-fill"
+                  style={{ width: `${Math.max((bar.value / maxValue) * 100, 4)}%` }}
+                />
+              </div>
+              <strong>{bar.value}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+    </article>
+  );
+}
+
 function getEventStats(sessions: AppSession[]): EventStats[] {
   const events = new Map<string, AppSession[]>();
 
@@ -393,6 +693,59 @@ function getEventStats(sessions: AppSession[]): EventStats[] {
     .sort(
       (a, b) => b.solveCount - a.solveCount || a.puzzle.localeCompare(b.puzzle),
     );
+}
+
+function getWeeklyProgress(sessions: AppSession[]): WeeklyProgress {
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const dayKeys = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() - (6 - index));
+    return date.toISOString().slice(0, 10);
+  });
+  const dayKeySet = new Set(dayKeys);
+  const dayStats = new Map<
+    string,
+    { eventIds: Set<string>; sessionCount: number; solveCount: number }
+  >();
+
+  for (const session of sessions) {
+    const date = new Date(session.createdAtSort ?? session.createdAt);
+    if (Number.isNaN(date.getTime())) continue;
+
+    const dayKey = date.toISOString().slice(0, 10);
+    if (!dayKeySet.has(dayKey)) continue;
+
+    const current = dayStats.get(dayKey) ?? {
+      eventIds: new Set<string>(),
+      sessionCount: 0,
+      solveCount: 0,
+    };
+    current.eventIds.add(session.puzzle);
+    current.sessionCount += 1;
+    current.solveCount += session.solves.length;
+    dayStats.set(dayKey, current);
+  }
+
+  const days = dayKeys.map((day) => ({
+      key: day,
+      label: formatChartDay(day),
+      eventCount: dayStats.get(day)?.eventIds.size ?? 0,
+      sessionCount: dayStats.get(day)?.sessionCount ?? 0,
+      value: dayStats.get(day)?.solveCount ?? 0,
+  }));
+
+  return {
+    days,
+    eventCount: new Set(sessions.map((session) => session.puzzle)).size,
+    sessionCount: sessions.length,
+    totalSolves: days.reduce((sum, day) => sum + day.value, 0),
+  };
+}
+
+function formatChartDay(day: string) {
+  const date = new Date(`${day}T12:00:00`);
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
 function formatWcaResult(eventId: string, value: number | null) {

@@ -1,5 +1,10 @@
 import type { AppSession, AppSolve, SocialProfile } from "./database";
+import { formatSessionTimestamp } from "./dateUtils";
 import { makeSolve } from "./solveUtils";
+
+const now = Date.now();
+const lunchSessionCreatedAt = new Date(now - 1000 * 60 * 45).toISOString();
+const ohSessionCreatedAt = new Date(now - 1000 * 60 * 60 * 27).toISOString();
 
 export const starterSessions: AppSession[] = [
   {
@@ -8,7 +13,8 @@ export const starterSessions: AppSession[] = [
     avatar: "MC",
     puzzle: "3x3",
     title: "Lunch break turning felt clean",
-    createdAt: "11:42 AM",
+    createdAt: formatSessionTimestamp(lunchSessionCreatedAt),
+    createdAtSort: lunchSessionCreatedAt,
     liked: true,
     solves: [
       makeSolve(18740, "ok"),
@@ -24,7 +30,8 @@ export const starterSessions: AppSession[] = [
     avatar: "NP",
     puzzle: "3x3 OH",
     title: "One-handed consistency block",
-    createdAt: "Yesterday",
+    createdAt: formatSessionTimestamp(ohSessionCreatedAt),
+    createdAtSort: ohSessionCreatedAt,
     liked: false,
     solves: [
       makeSolve(31240, "ok"),
@@ -95,13 +102,16 @@ function makeCandidateSession(
   title: string,
   times: number[],
 ): AppSession {
+  const createdAt = new Date(now - 1000 * 60 * 60 * 12).toISOString();
+
   return {
     id: crypto.randomUUID(),
     user,
     avatar,
     puzzle,
     title,
-    createdAt: "This week",
+    createdAt: formatSessionTimestamp(createdAt),
+    createdAtSort: createdAt,
     liked: false,
     solves: times.map((time) => makeSolve(time, "ok")),
   };
