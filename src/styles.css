@@ -349,24 +349,18 @@ small,
   max-width: 320px;
 }
 
-.profile-chart-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
-}
-
 .weekly-progress-card {
   background: #fffaf1;
   border: 1px solid #e1dbce;
   border-radius: 8px;
   display: grid;
-  gap: 18px;
+  gap: 14px;
   min-width: 0;
-  padding: 18px;
+  padding: 16px;
 }
 
 .weekly-progress-card h4 {
-  font-size: 1.45rem;
+  font-size: 1.3rem;
   margin: 0;
 }
 
@@ -378,7 +372,7 @@ small,
 
 .weekly-summary {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   grid-template-columns: repeat(3, 1fr);
 }
 
@@ -399,7 +393,7 @@ small,
 }
 
 .weekly-summary strong {
-  font-size: clamp(1.55rem, 4vw, 2.7rem);
+  font-size: clamp(1.4rem, 3.4vw, 2.25rem);
   font-weight: 800;
   line-height: 1;
 }
@@ -493,61 +487,6 @@ small,
   font-weight: 900;
 }
 
-.profile-chart-card {
-  background: #edf5f0;
-  border: 1px solid #d3ded8;
-  border-radius: 8px;
-  display: grid;
-  gap: 12px;
-  min-width: 0;
-  padding: 14px;
-}
-
-.profile-chart-card h4 {
-  font-size: 1rem;
-  margin: 0;
-}
-
-.solve-bar-chart {
-  display: grid;
-  gap: 9px;
-}
-
-.solve-bar-row {
-  align-items: center;
-  display: grid;
-  gap: 8px;
-  grid-template-columns: minmax(58px, 92px) minmax(0, 1fr) 32px;
-}
-
-.solve-bar-row span {
-  color: #5a655f;
-  font-size: 0.78rem;
-  font-weight: 900;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.solve-bar-row strong {
-  font-size: 0.84rem;
-  text-align: right;
-}
-
-.solve-bar-track {
-  background: white;
-  border: 1px solid #d3ded8;
-  border-radius: 8px;
-  height: 12px;
-  overflow: hidden;
-}
-
-.solve-bar-fill {
-  background: #39a48f;
-  border-radius: inherit;
-  height: 100%;
-}
-
 .wca-grid {
   display: grid;
   gap: 10px;
@@ -629,6 +568,11 @@ small,
   border-radius: 8px;
   font-weight: 900;
   padding: 8px 10px;
+}
+
+.selected-day-sessions {
+  display: grid;
+  gap: 12px;
 }
 
 .delete-session-button {
@@ -1179,10 +1123,6 @@ textarea {
   }
 
   .profile-tab-list {
-    grid-template-columns: 1fr;
-  }
-
-  .profile-chart-grid {
     grid-template-columns: 1fr;
   }
 

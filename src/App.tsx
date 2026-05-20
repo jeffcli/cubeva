@@ -60,7 +60,6 @@ import { isSupabaseConfigured, supabase } from "./supabase";
 
 type FollowCandidate = SocialProfile;
 
-
 export function App() {
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -157,7 +156,9 @@ function CubeApp({
     null,
   );
   const [profileRecord, setProfileRecord] = useState<AppProfile | null>(null);
-  const [profileWcaPersonalBests, setProfileWcaPersonalBests] = useState<WcaPersonalBest[]>([]);
+  const [profileWcaPersonalBests, setProfileWcaPersonalBests] = useState<
+    WcaPersonalBest[]
+  >([]);
   const [profileForm, setProfileForm] = useState({
     displayName: "",
     username: "",
@@ -467,7 +468,11 @@ function CubeApp({
   }
 
   function importSolves() {
-    const imported = parseImportedSolves(importText, currentScramble, currentResultType);
+    const imported = parseImportedSolves(
+      importText,
+      currentScramble,
+      currentResultType,
+    );
     if (!imported.length) return;
     setSolves((current) => [...imported, ...current]);
     setImportText("");
@@ -777,24 +782,6 @@ function CubeApp({
             <Trophy size={18} /> Profile
           </button>
         </nav>
-
-        <button
-          className="profile-card compact-profile"
-          type="button"
-          onClick={showSelfProfile}
-        >
-          <div className="avatar large">{initials}</div>
-          <h2>{displayName}</h2>
-          <p>@{username} · 3x3 focus</p>
-          <div className="mini-grid">
-            <span>
-              <strong>{stats.best}</strong> PB
-            </span>
-            <span>
-              <strong>{stats.average}</strong> Avg
-            </span>
-          </div>
-        </button>
       </aside>
 
       <section className="workspace" id="timer" hidden={activeView !== "timer"}>
@@ -826,7 +813,10 @@ function CubeApp({
               <span>Enter your move count, then publish the session.</span>
             </div>
           ) : (
-            <button className={`timer-face ${timerState}`} onClick={toggleTimer}>
+            <button
+              className={`timer-face ${timerState}`}
+              onClick={toggleTimer}
+            >
               <span>
                 {timerState === "running"
                   ? formatTime(elapsed)
@@ -950,7 +940,8 @@ function CubeApp({
               onChange={(event) => setImportText(event.target.value)}
             />
             <button type="button" onClick={importSolves}>
-              <Plus size={18} /> {isManualOnlyEvent ? "Import Results" : "Import Times"}
+              <Plus size={18} />{" "}
+              {isManualOnlyEvent ? "Import Results" : "Import Times"}
             </button>
           </div>
         </section>
@@ -1015,7 +1006,10 @@ function CubeApp({
       </section>
 
       <section className="workspace" hidden={activeView !== "feed"}>
-        <FeedPage sessions={chronologicalFeedSessions} loading={sessionsLoading} />
+        <FeedPage
+          sessions={chronologicalFeedSessions}
+          loading={sessionsLoading}
+        />
       </section>
 
       <section className="workspace" hidden={activeView !== "people"}>
