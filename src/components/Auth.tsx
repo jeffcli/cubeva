@@ -53,19 +53,27 @@ export function AuthScreen({ onDemo }: { onDemo: () => void }) {
   if (!isSupabaseConfigured) {
     return (
       <AuthShell>
-        <section className="auth-card">
-          <p className="eyebrow">Auth setup</p>
-          <h1>Connect Supabase to enable signup and login.</h1>
+        <section className="grid w-[min(100%,480px)] max-w-[480px] gap-4 rounded-lg border border-line bg-card p-6 shadow-[0_22px_60px_rgba(29,35,32,0.12)] [&>h1]:m-0 [&>p]:m-0">
+          <p className="m-0 text-[0.72rem] font-black uppercase text-soft-muted">
+            Auth setup
+          </p>
+          <h1 className="text-[clamp(2rem,5vw,3.4rem)] leading-none">
+            Connect Supabase to enable signup and login.
+          </h1>
           <p>
             Create a `.env.local` file from `.env.example`, paste your project
             URL and anon key, then restart `npm run dev`.
           </p>
-          <div className="auth-code">
+          <div className="rounded-lg bg-ink p-3.5 text-center font-mono text-[0.86rem] leading-[1.7] text-[#f8f2e7] [overflow-wrap:anywhere]">
             VITE_SUPABASE_URL=https://your-project.supabase.co
             <br />
             VITE_SUPABASE_ANON_KEY=your-anon-key
           </div>
-          <button type="button" onClick={onDemo}>
+          <button
+            className="min-h-[46px] bg-ink px-4 text-white"
+            type="button"
+            onClick={onDemo}
+          >
             Continue in demo mode
           </button>
         </section>
@@ -75,14 +83,19 @@ export function AuthScreen({ onDemo }: { onDemo: () => void }) {
 
   return (
     <AuthShell>
-      <section className="auth-card">
-        <p className="eyebrow">Welcome to CubeVa</p>
-        <h1>
+      <section className="grid w-[min(100%,480px)] max-w-[480px] gap-4 rounded-lg border border-line bg-card p-6 shadow-[0_22px_60px_rgba(29,35,32,0.12)] [&>h1]:m-0 [&>p]:m-0">
+        <p className="text-[0.72rem] font-black uppercase text-soft-muted">
+          Welcome to CubeVa
+        </p>
+        <h1 className="text-[clamp(2rem,5vw,3.4rem)] leading-none">
           {mode === "signup"
             ? "Create your cubing profile."
             : "Sign in to your cubing log."}
         </h1>
-        <form className="auth-form" onSubmit={submitAuth}>
+        <form
+          className="grid gap-3 [&_label]:grid [&_label]:gap-1.5 [&_label]:text-[0.82rem] [&_label]:font-extrabold [&_label]:text-muted"
+          onSubmit={submitAuth}
+        >
           {mode === "signup" && (
             <>
               <label>
@@ -126,7 +139,11 @@ export function AuthScreen({ onDemo }: { onDemo: () => void }) {
               required
             />
           </label>
-          <button type="submit" disabled={loading}>
+          <button
+            className="min-h-[46px] bg-ink px-4 text-white"
+            type="submit"
+            disabled={loading}
+          >
             {loading
               ? "Working..."
               : mode === "signup"
@@ -134,9 +151,13 @@ export function AuthScreen({ onDemo }: { onDemo: () => void }) {
                 : "Sign In"}
           </button>
         </form>
-        {message && <p className="auth-message">{message}</p>}
+        {message && (
+          <p className="m-0 rounded-lg bg-panel p-3 font-bold text-ink">
+            {message}
+          </p>
+        )}
         <button
-          className="link-button"
+          className="min-h-0 justify-self-start bg-transparent p-0 text-teal"
           type="button"
           onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
         >
@@ -144,7 +165,11 @@ export function AuthScreen({ onDemo }: { onDemo: () => void }) {
             ? "Already have an account? Sign in"
             : "Need an account? Sign up"}
         </button>
-        <button className="link-button" type="button" onClick={onDemo}>
+        <button
+          className="min-h-0 justify-self-start bg-transparent p-0 text-teal"
+          type="button"
+          onClick={onDemo}
+        >
           Continue in demo mode
         </button>
       </section>
@@ -154,12 +179,14 @@ export function AuthScreen({ onDemo }: { onDemo: () => void }) {
 
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="auth-shell">
-      <div className="brand auth-brand">
-        <div className="brand-mark">CV</div>
+    <main className="grid min-h-screen items-center justify-items-center gap-6 p-[22px]">
+      <div className="fixed left-[22px] top-[22px] flex items-center gap-3">
+        <div className="flex h-[42px] w-[42px] flex-none items-center justify-center rounded-lg bg-accent font-black text-[#101615] shadow-[inset_-10px_-10px_0_#f5a623,inset_10px_10px_0_#2f81ed]">
+          CV
+        </div>
         <div>
-          <h1>CubeVa</h1>
-          <p>Training feed for speedcubers</p>
+          <h1 className="m-0 text-[1.35rem]">CubeVa</h1>
+          <p className="m-0 text-soft-muted">Training feed for speedcubers</p>
         </div>
       </div>
       {children}

@@ -36,11 +36,11 @@ export function WeeklyProgressChart({
     points.find((point) => point.day.key === selectedDay?.key) ?? points.at(-1);
 
   return (
-    <article className="weekly-progress-card">
+    <article className="grid min-w-0 gap-3.5 rounded-lg border border-line bg-[#fffaf1] p-4">
       <div>
-        <h4>This week</h4>
+        <h4 className="m-0 text-[1.3rem]">This week</h4>
       </div>
-      <div className="weekly-summary">
+      <div className="grid grid-cols-3 gap-2.5 max-[760px]:grid-cols-1 [&_div]:grid [&_div]:gap-1 [&_div]:border-r [&_div]:border-[#d8d1c5] max-[760px]:[&_div]:border-r-0 max-[760px]:[&_div]:border-b max-[760px]:[&_div]:pb-2.5 [&_div:last-child]:border-0 max-[760px]:[&_div:last-child]:pb-0 [&_span]:text-[0.84rem] [&_span]:font-extrabold [&_span]:text-muted [&_strong]:text-[clamp(1.4rem,3.4vw,2.25rem)] [&_strong]:font-extrabold [&_strong]:leading-none">
         <div>
           <span>Solves</span>
           <strong>{selectedDay?.value ?? 0}</strong>
@@ -54,9 +54,9 @@ export function WeeklyProgressChart({
           <strong>{selectedDay?.eventCount ?? 0}</strong>
         </div>
       </div>
-      <div className="weekly-chart-wrap">
+      <div className="min-w-0 overflow-hidden">
         <svg
-          className="weekly-chart"
+          className="block h-auto w-full overflow-visible"
           role="img"
           aria-label={`Last 7 days: ${progress.totalSolves} solves`}
           viewBox={`0 0 ${chartWidth} ${chartHeight}`}
@@ -72,13 +72,13 @@ export function WeeklyProgressChart({
             return (
               <g key={ratio}>
                 <line
-                  className="weekly-grid-line"
+                  className="stroke-[#ddd8d0] stroke-[1]"
                   x1={padding.left}
                   x2={padding.left + plotWidth}
                   y1={y}
                   y2={y}
                 />
-                <text className="weekly-axis-label" x={8} y={y + 5}>
+                <text className="fill-muted text-[13px]" x={8} y={y + 5}>
                   {Math.round(maxValue * ratio)}
                 </text>
               </g>
@@ -93,14 +93,14 @@ export function WeeklyProgressChart({
             return (
               <g key={day.label}>
                 <line
-                  className="weekly-grid-line vertical"
+                  className="stroke-[#ddd8d0] stroke-[1] opacity-[0.72]"
                   x1={x}
                   x2={x}
                   y1={padding.top}
                   y2={padding.top + plotHeight}
                 />
                 <text
-                  className="weekly-axis-label day"
+                  className="fill-muted text-xs font-extrabold"
                   textAnchor="middle"
                   x={x}
                   y={chartHeight - 8}
@@ -110,11 +110,14 @@ export function WeeklyProgressChart({
               </g>
             );
           })}
-          <path className="weekly-area" d={areaPath} />
-          <path className="weekly-line" d={linePath} />
+          <path fill='url("#weeklySolveFill")' d={areaPath} />
+          <path
+            className="fill-none stroke-orange stroke-[5] [stroke-linecap:round] [stroke-linejoin:round]"
+            d={linePath}
+          />
           {points.map((point) => (
             <g
-              className="weekly-point-button"
+              className="group cursor-pointer outline-none"
               key={point.day.key}
               onClick={() => onSelectDay(point.day.key)}
               onKeyDown={(event) => {
@@ -129,15 +132,15 @@ export function WeeklyProgressChart({
               <circle
                 className={
                   point.day.key === selectedPoint?.day.key
-                    ? "weekly-point selected"
-                    : "weekly-point"
+                    ? "fill-orange stroke-orange stroke-[5]"
+                    : "fill-[#fffaf1] stroke-orange stroke-[5]"
                 }
                 cx={point.x}
                 cy={point.y}
                 r="6"
               />
               <circle
-                className="weekly-hit-target"
+                className="fill-orange opacity-0 group-hover:opacity-[0.12] group-focus:opacity-[0.12]"
                 cx={point.x}
                 cy={point.y}
                 r="18"
@@ -147,26 +150,26 @@ export function WeeklyProgressChart({
           {selectedPoint && (
             <>
               <line
-                className="weekly-current-line"
+                className="stroke-orange stroke-[4]"
                 x1={selectedPoint.x}
                 x2={selectedPoint.x}
                 y1={padding.top}
                 y2={padding.top + plotHeight}
               />
               <circle
-                className="weekly-current-glow"
+                className="fill-orange opacity-[0.18]"
                 cx={selectedPoint.x}
                 cy={selectedPoint.y}
                 r="20"
               />
               <circle
-                className="weekly-current-point"
+                className="fill-orange stroke-orange"
                 cx={selectedPoint.x}
                 cy={selectedPoint.y}
                 r="10"
               />
               <text
-                className="weekly-current-label"
+                className="fill-orange text-[17px] font-black"
                 textAnchor="end"
                 x={selectedPoint.x}
                 y={padding.top - 8}

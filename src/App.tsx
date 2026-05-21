@@ -88,9 +88,13 @@ export function App() {
   if (authLoading) {
     return (
       <AuthShell>
-        <div className="auth-card">
-          <p className="eyebrow">Loading</p>
-          <h1>Checking your CubeVa session.</h1>
+        <div className="grid w-[min(100%,480px)] max-w-[480px] gap-4 rounded-lg border border-line bg-card p-6 shadow-[0_22px_60px_rgba(29,35,32,0.12)]">
+          <p className="m-0 text-[0.72rem] font-black uppercase text-soft-muted">
+            Loading
+          </p>
+          <h1 className="m-0 text-[clamp(2rem,5vw,3.4rem)] leading-none">
+            Checking your CubeVa session.
+          </h1>
         </div>
       </AuthShell>
     );
@@ -733,17 +737,21 @@ function CubeApp({
   }
 
   return (
-    <main className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-mark">CV</div>
+    <main className="grid min-h-screen gap-[22px] p-[22px] [grid-template-columns:260px_minmax(360px,1fr)] max-[1120px]:[grid-template-columns:210px_minmax(0,1fr)] max-[760px]:flex max-[760px]:flex-col max-[760px]:p-3.5">
+      <aside className="flex min-w-0 flex-col gap-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-[42px] w-[42px] flex-none items-center justify-center rounded-lg bg-accent font-black text-[#101615] shadow-[inset_-10px_-10px_0_#f5a623,inset_10px_10px_0_#2f81ed]">
+            CV
+          </div>
           <div>
-            <h1>CubeVa</h1>
-            <p>Training feed for speedcubers</p>
+            <h1 className="m-0 text-[1.35rem]">CubeVa</h1>
+            <p className="m-0 text-soft-muted">
+              Training feed for speedcubers
+            </p>
           </div>
         </div>
         <button
-          className="sign-out"
+          className="min-h-[42px] bg-ink px-3 text-white"
           type="button"
           onClick={() => {
             if (confirmLeavingUnpublishedSession()) onSignOut();
@@ -752,30 +760,46 @@ function CubeApp({
           <LogOut size={17} /> {demoMode ? "Exit demo" : "Sign out"}
         </button>
 
-        <nav className="nav-list" aria-label="Primary">
+        <nav className="grid gap-2" aria-label="Primary">
           <button
-            className={activeView === "feed" ? "active" : ""}
+            className={`w-full justify-start gap-2.5 p-3 ${
+              activeView === "feed"
+                ? "bg-ink text-white"
+                : "bg-transparent text-[#34413d] hover:bg-ink hover:text-white"
+            }`}
             type="button"
             onClick={() => setActiveView("feed")}
           >
             <Activity size={18} /> Feed
           </button>
           <button
-            className={activeView === "timer" ? "active" : ""}
+            className={`w-full justify-start gap-2.5 p-3 ${
+              activeView === "timer"
+                ? "bg-ink text-white"
+                : "bg-transparent text-[#34413d] hover:bg-ink hover:text-white"
+            }`}
             type="button"
             onClick={() => setActiveView("timer")}
           >
             <Timer size={18} /> Timer
           </button>
           <button
-            className={activeView === "people" ? "active" : ""}
+            className={`w-full justify-start gap-2.5 p-3 ${
+              activeView === "people"
+                ? "bg-ink text-white"
+                : "bg-transparent text-[#34413d] hover:bg-ink hover:text-white"
+            }`}
             type="button"
             onClick={() => setActiveView("people")}
           >
             <Users size={18} /> People
           </button>
           <button
-            className={activeView === "profile" ? "active" : ""}
+            className={`w-full justify-start gap-2.5 p-3 ${
+              activeView === "profile"
+                ? "bg-ink text-white"
+                : "bg-transparent text-[#34413d] hover:bg-ink hover:text-white"
+            }`}
             type="button"
             onClick={showSelfProfile}
           >
@@ -784,13 +808,21 @@ function CubeApp({
         </nav>
       </aside>
 
-      <section className="workspace" id="timer" hidden={activeView !== "timer"}>
-        <header className="topbar">
+      <section
+        className="flex min-w-0 flex-col gap-4"
+        id="timer"
+        hidden={activeView !== "timer"}
+      >
+        <header className="flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-stretch">
           <div>
-            <p className="eyebrow">Current session</p>
-            <h2>Log solves, track progress, keep up with friends.</h2>
+            <p className="m-0 text-[0.72rem] font-black uppercase text-soft-muted">
+              Current session
+            </p>
+            <h2 className="m-0 max-w-[720px] text-[clamp(1.55rem,2.4vw,2.7rem)] leading-[1.05]">
+              Log solves, track progress, keep up with friends.
+            </h2>
           </div>
-          <label className="select-label">
+          <label className="grid gap-1.5 text-[0.78rem] font-extrabold text-muted">
             Event
             <select
               value={puzzle}
@@ -803,28 +835,36 @@ function CubeApp({
           </label>
         </header>
 
-        <section className="timer-panel">
-          <div className="scramble-line">
+        <section className="grid gap-4 rounded-lg border border-line bg-card p-5 shadow-[0_18px_45px_rgba(29,35,32,0.08)]">
+          <div className="rounded-lg bg-ink p-3.5 text-center font-mono text-[clamp(0.9rem,1.3vw,1.15rem)] text-[#f8f2e7]">
             {scrambleLoading ? "Generating scramble..." : currentScramble}
           </div>
           {isManualOnlyEvent ? (
-            <div className="manual-only-panel">
-              <strong>FMC manual entry</strong>
+            <div className="grid min-h-[180px] place-content-center gap-2 rounded-lg border-[3px] border-ink bg-panel text-center">
+              <strong className="text-[clamp(2rem,5vw,4rem)] leading-none">
+                FMC manual entry
+              </strong>
               <span>Enter your move count, then publish the session.</span>
             </div>
           ) : (
             <button
-              className={`timer-face ${timerState}`}
+              className={`grid min-h-[250px] w-full place-items-center border-[5px] border-ink text-center text-ink max-[760px]:min-h-[210px] ${
+                timerState === "running"
+                  ? "bg-green"
+                  : timerState === "inspection"
+                    ? "bg-panel"
+                    : "bg-gold"
+              }`}
               onClick={toggleTimer}
             >
-              <span>
+              <span className="text-[clamp(4.4rem,10vw,8.4rem)] leading-[0.95] [font-variant-numeric:tabular-nums]">
                 {timerState === "running"
                   ? formatTime(elapsed)
                   : timerState === "inspection"
                     ? Math.max(0, 15 - Math.floor(inspectionElapsed / 1000))
                     : "Ready"}
               </span>
-              <small>
+              <small className="mt-2 block font-extrabold text-ink">
                 {timerState === "running"
                   ? `tap to stop and save${inspectionPenalty !== "ok" ? ` (${inspectionPenalty.toUpperCase()})` : ""}`
                   : timerState === "inspection"
@@ -835,9 +875,13 @@ function CubeApp({
               </small>
             </button>
           )}
-          <div className="action-row">
+          <div className="flex flex-wrap items-center gap-3">
             {!isManualOnlyEvent && (
-              <button type="button" onClick={toggleTimer}>
+              <button
+                className="min-h-11 bg-ink px-3.5 text-white"
+                type="button"
+                onClick={toggleTimer}
+              >
                 {timerState === "running" ? (
                   <Square size={18} />
                 ) : (
@@ -851,6 +895,7 @@ function CubeApp({
               </button>
             )}
             <button
+              className="min-h-11 bg-ink px-3.5 text-white"
               type="button"
               onClick={nextScramble}
               disabled={scrambleLoading || timerState !== "ready"}
@@ -858,6 +903,7 @@ function CubeApp({
               <Timer size={18} /> New Scramble
             </button>
             <button
+              className="min-h-11 bg-ink px-3.5 text-white"
               type="button"
               onClick={publishSession}
               disabled={publishing || !solves.length}
@@ -867,7 +913,7 @@ function CubeApp({
             </button>
           </div>
           {inspectionAvailable && (
-            <label className="toggle-row">
+            <label className="inline-flex items-center gap-2.5 font-extrabold text-[#34413d] [&_input]:min-h-0 [&_input]:w-[18px]">
               <input
                 type="checkbox"
                 checked={inspectionEnabled}
@@ -877,14 +923,18 @@ function CubeApp({
             </label>
           )}
           {!inspectionAvailable && !isManualOnlyEvent && (
-            <p className="session-message">No WCA inspection for this event.</p>
+            <p className="m-0 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
+              No WCA inspection for this event.
+            </p>
           )}
           {sessionMessage && (
-            <p className="session-message">{sessionMessage}</p>
+            <p className="m-0 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
+              {sessionMessage}
+            </p>
           )}
         </section>
 
-        <section className="stats-grid">
+        <section className="grid grid-cols-4 gap-2.5 max-[760px]:grid-cols-2">
           <Metric
             icon={<Clock size={18} />}
             label="Latest"
@@ -905,9 +955,9 @@ function CubeApp({
           />
         </section>
 
-        <section className="manual-log">
-          <h3>{isManualOnlyEvent ? "FMC entry" : "Manual log"}</h3>
-          <div className="manual-controls">
+        <section className="rounded-lg border border-line bg-card p-4 shadow-[0_18px_45px_rgba(29,35,32,0.08)]">
+          <h3 className="m-0">{isManualOnlyEvent ? "FMC entry" : "Manual log"}</h3>
+          <div className="mt-3 flex items-center gap-3 max-[760px]:flex-col max-[760px]:items-stretch [&_input]:min-w-[120px] [&_input]:flex-1">
             <input
               inputMode={isManualOnlyEvent ? "numeric" : "decimal"}
               placeholder={isManualOnlyEvent ? "32 moves" : "18.42"}
@@ -924,11 +974,15 @@ function CubeApp({
               {!isManualOnlyEvent && <option value="+2">+2</option>}
               <option value="dnf">DNF</option>
             </select>
-            <button type="button" onClick={addManualSolve}>
+            <button
+              className="min-h-11 bg-ink px-3.5 text-white"
+              type="button"
+              onClick={addManualSolve}
+            >
               <Plus size={18} /> Add
             </button>
           </div>
-          <div className="import-controls">
+          <div className="mt-3 grid items-stretch gap-2.5 [grid-template-columns:minmax(0,1fr)_auto] max-[760px]:flex max-[760px]:flex-col [&_textarea]:min-w-[120px] [&_textarea]:flex-1">
             <textarea
               rows={3}
               placeholder={
@@ -939,20 +993,29 @@ function CubeApp({
               value={importText}
               onChange={(event) => setImportText(event.target.value)}
             />
-            <button type="button" onClick={importSolves}>
+            <button
+              className="min-h-11 bg-ink px-3.5 text-white"
+              type="button"
+              onClick={importSolves}
+            >
               <Plus size={18} />{" "}
               {isManualOnlyEvent ? "Import Results" : "Import Times"}
             </button>
           </div>
         </section>
 
-        <section className="solve-table">
-          <div className="section-head">
-            <h3>Session solves</h3>
-            <span>{puzzle}</span>
+        <section className="rounded-lg border border-line bg-card p-4 shadow-[0_18px_45px_rgba(29,35,32,0.08)]">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="m-0">Session solves</h3>
+            <span className="text-[0.85rem] font-extrabold text-soft-muted">
+              {puzzle}
+            </span>
           </div>
           {solves.map((solve, index) => (
-            <div className="solve-row" key={solve.id}>
+            <div
+              className="grid min-h-[54px] items-center gap-2.5 border-t border-rule [grid-template-columns:46px_90px_76px_minmax(0,1fr)_42px] max-[760px]:[grid-template-columns:42px_80px_76px_42px]"
+              key={solve.id}
+            >
               <span>#{solves.length - index}</span>
               <strong>{formatSolveResult(solve)}</strong>
               <select
@@ -966,8 +1029,11 @@ function CubeApp({
                 {solve.resultType !== "moves" && <option value="+2">+2</option>}
                 <option value="dnf">DNF</option>
               </select>
-              <p>{solve.scramble}</p>
+              <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[#66716c] max-[760px]:col-span-full max-[760px]:pb-2.5 max-[760px]:whitespace-normal">
+                {solve.scramble}
+              </p>
               <button
+                className="h-9 w-9 bg-panel p-0 text-ink"
                 type="button"
                 aria-label={`Delete solve ${solves.length - index}`}
                 onClick={() => deleteSolve(solve.id)}
@@ -979,7 +1045,10 @@ function CubeApp({
         </section>
       </section>
 
-      <section className="workspace" hidden={activeView !== "profile"}>
+      <section
+        className="flex min-w-0 flex-col gap-4"
+        hidden={activeView !== "profile"}
+      >
         <ProfilePage
           profile={profileToShow}
           stats={profileStats}
@@ -1005,43 +1074,65 @@ function CubeApp({
         />
       </section>
 
-      <section className="workspace" hidden={activeView !== "feed"}>
+      <section
+        className="flex min-w-0 flex-col gap-4"
+        hidden={activeView !== "feed"}
+      >
         <FeedPage
           sessions={chronologicalFeedSessions}
           loading={sessionsLoading}
         />
       </section>
 
-      <section className="workspace" hidden={activeView !== "people"}>
-        <section className="people" id="people">
-          <div className="section-head">
-            <h3>Find cubers</h3>
-            {peopleLoading ? <span>Loading</span> : <Search size={18} />}
+      <section
+        className="flex min-w-0 flex-col gap-4"
+        hidden={activeView !== "people"}
+      >
+        <section
+          className="grid gap-3 rounded-lg border border-line bg-card p-4 shadow-[0_18px_45px_rgba(29,35,32,0.08)]"
+          id="people"
+        >
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="m-0">Find cubers</h3>
+            {peopleLoading ? (
+              <span className="text-[0.85rem] font-extrabold text-soft-muted">
+                Loading
+              </span>
+            ) : (
+              <Search size={18} />
+            )}
           </div>
           {!peopleLoading && following.length === 0 && (
-            <p className="empty-state">
+            <p className="m-0 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
               No other profiles yet. Create another account to test follows.
             </p>
           )}
           {following.map((person) => (
-            <div className="person-row" key={person.id}>
-              <div className="avatar">{person.avatar}</div>
-              <div>
+            <div
+              className="flex items-center gap-3 border-t border-rule pt-3 [&_small]:block [&_strong]:block"
+              key={person.id}
+            >
+              <div className="flex h-[42px] w-[42px] flex-none items-center justify-center rounded-lg bg-teal font-black text-white">
+                {person.avatar}
+              </div>
+              <div className="min-w-0 flex-1">
                 <strong>{person.name}</strong>
-                <small>
+                <small className="text-soft-muted">
                   {person.handle} · {person.average}
                 </small>
               </div>
               <button
                 aria-label={`Follow ${person.name}`}
-                className={person.following ? "following" : ""}
+                className={`h-[38px] w-[38px] p-0 text-white ${
+                  person.following ? "bg-green" : "bg-ink"
+                }`}
                 onClick={() => togglePersonFollow(person)}
                 type="button"
               >
                 <UserPlus size={16} />
               </button>
               <button
-                className="view-profile-button"
+                className="h-[38px] w-auto bg-panel px-3 text-ink"
                 type="button"
                 onClick={() => openCandidateProfile(person)}
               >

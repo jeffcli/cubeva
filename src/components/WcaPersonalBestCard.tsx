@@ -8,27 +8,33 @@ export function WcaPersonalBestCard({
   personalBest: WcaPersonalBest;
 }) {
   return (
-    <article className="wca-card">
-      <div className="wca-card-head">
+    <article className="grid gap-2.5 rounded-lg border border-panel-border bg-panel p-3.5">
+      <div className="flex items-center gap-2">
         <Medal size={18} />
         <strong>{personalBest.eventName}</strong>
       </div>
-      <dl>
-        <div>
-          <dt>Single</dt>
-          <dd>
+      <dl className="m-0 grid gap-2">
+        <div className="flex items-center justify-between gap-2.5">
+          <dt className="text-[0.75rem] font-black uppercase text-muted">
+            Single
+          </dt>
+          <dd className="m-0 text-right font-black">
             {formatWcaResult(personalBest.eventId, personalBest.bestSingle)}
           </dd>
         </div>
-        <div>
-          <dt>Average</dt>
-          <dd>
+        <div className="flex items-center justify-between gap-2.5">
+          <dt className="text-[0.75rem] font-black uppercase text-muted">
+            Average
+          </dt>
+          <dd className="m-0 text-right font-black">
             {formatWcaResult(personalBest.eventId, personalBest.bestAverage)}
           </dd>
         </div>
-        <div>
-          <dt>World rank</dt>
-          <dd>
+        <div className="flex items-center justify-between gap-2.5">
+          <dt className="text-[0.75rem] font-black uppercase text-muted">
+            World rank
+          </dt>
+          <dd className="m-0 text-right font-black">
             {formatRank(personalBest.worldRankSingle)}
             {personalBest.worldRankAverage
               ? ` / ${formatRank(personalBest.worldRankAverage)}`

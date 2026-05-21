@@ -83,26 +83,42 @@ export function ProfilePage({
 
   return (
     <>
-      <section className="profile-hero">
-        <div className="profile-identity">
-          <div className="avatar xl">{profile.initials}</div>
+      <section className="grid gap-4 rounded-lg border border-line bg-card p-[22px] shadow-[0_18px_45px_rgba(29,35,32,0.08)]">
+        <div className="flex items-center gap-3.5 max-[760px]:flex-col max-[760px]:items-stretch">
+          <div className="flex h-[78px] w-[78px] flex-none items-center justify-center rounded-lg bg-teal text-[1.75rem] font-black text-white">
+            {profile.initials}
+          </div>
           <div>
-            <p className="eyebrow">
+            <p className="m-0 text-[0.72rem] font-black uppercase text-soft-muted">
               {profile.isSelf ? "Your profile" : "Public profile"}
             </p>
-            <h2>{profile.displayName}</h2>
-            <p>@{profile.username}</p>
-            {profile.wcaId && <p className="wca-id">WCA ID {profile.wcaId}</p>}
+            <h2 className="m-0 text-[clamp(2.1rem,5vw,4rem)] leading-[0.98]">
+              {profile.displayName}
+            </h2>
+            <p className="m-0">@{profile.username}</p>
+            {profile.wcaId && (
+              <p className="mt-1 text-[0.88rem] font-black text-[#227064]">
+                WCA ID {profile.wcaId}
+              </p>
+            )}
           </div>
         </div>
-        <p>{profile.bio || "No bio yet."}</p>
-        <div className="profile-actions">
+        <p className="m-0">{profile.bio || "No bio yet."}</p>
+        <div className="flex items-center gap-3.5 max-[760px]:flex-col max-[760px]:items-stretch">
           {profile.isSelf ? (
-            <button type="button" onClick={onEdit}>
+            <button
+              className="min-h-11 bg-ink px-3.5 text-white"
+              type="button"
+              onClick={onEdit}
+            >
               <Edit3 size={18} /> Edit Profile
             </button>
           ) : (
-            <button type="button" onClick={onFollow}>
+            <button
+              className="min-h-11 bg-ink px-3.5 text-white"
+              type="button"
+              onClick={onFollow}
+            >
               <UserPlus size={18} />{" "}
               {profile.following ? "Following" : "Follow"}
             </button>
@@ -111,7 +127,10 @@ export function ProfilePage({
       </section>
 
       {profile.isSelf && isEditing && (
-        <form className="profile-editor" onSubmit={onSave}>
+        <form
+          className="grid gap-3 rounded-lg border border-line bg-card p-[18px] shadow-[0_18px_45px_rgba(29,35,32,0.08)] [&_label]:grid [&_label]:gap-1.5 [&_label]:text-[0.82rem] [&_label]:font-extrabold [&_label]:text-muted"
+          onSubmit={onSave}
+        >
           <label>
             Display name
             <input
@@ -152,12 +171,16 @@ export function ProfilePage({
               placeholder="2019SMIT01"
             />
           </label>
-          <div className="action-row">
-            <button type="submit" disabled={saving}>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              className="min-h-11 bg-ink px-3.5 text-white"
+              type="submit"
+              disabled={saving}
+            >
               {saving ? "Saving..." : "Save Profile"}
             </button>
             <button
-              className="secondary-button"
+              className="min-h-11 bg-panel px-3.5 text-ink"
               type="button"
               onClick={onCancel}
             >
@@ -167,18 +190,26 @@ export function ProfilePage({
         </form>
       )}
 
-      {message && <p className="session-message">{message}</p>}
+      {message && (
+        <p className="m-0 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
+          {message}
+        </p>
+      )}
 
-      <section className="profile-tabs">
+      <section className="grid gap-3 rounded-lg border border-line bg-card p-[18px] shadow-[0_18px_45px_rgba(29,35,32,0.08)]">
         <div
-          className="profile-tab-list"
+          className="grid grid-cols-3 gap-1 rounded-lg border border-panel-border bg-panel p-1 max-[760px]:grid-cols-1"
           role="tablist"
           aria-label="Profile details"
         >
           {profileTabs.map((tab) => (
             <button
               aria-selected={activeTab === tab.id}
-              className={activeTab === tab.id ? "active" : ""}
+              className={`min-h-10 justify-center px-2.5 ${
+                activeTab === tab.id
+                  ? "bg-ink text-white"
+                  : "bg-transparent text-muted hover:bg-ink hover:text-white"
+              }`}
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               role="tab"
@@ -190,22 +221,24 @@ export function ProfilePage({
         </div>
 
         {activeTab === "wca" && (
-          <div className="profile-tab-panel" role="tabpanel">
-            <div className="section-head">
+          <div className="grid gap-3" role="tabpanel">
+            <div className="mb-3 flex items-center justify-between gap-3">
               <h3>WCA personal bests</h3>
-              <span>{profile.wcaId || "No WCA ID"}</span>
+              <span className="text-[0.85rem] font-extrabold text-soft-muted">
+                {profile.wcaId || "No WCA ID"}
+              </span>
             </div>
             {!profile.wcaId ? (
-              <p className="empty-state">
+              <p className="m-0 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
                 Add a WCA ID to this profile to show official personal bests.
               </p>
             ) : profile.wcaPersonalBests.length === 0 ? (
-              <p className="empty-state">
+              <p className="m-0 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
                 WCA ID linked. Personal bests will appear after the WCA cache is
                 imported.
               </p>
             ) : (
-              <div className="wca-grid">
+              <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
                 {profile.wcaPersonalBests.map((personalBest) => (
                   <WcaPersonalBestCard
                     personalBest={personalBest}
@@ -218,12 +251,14 @@ export function ProfilePage({
         )}
 
         {activeTab === "events" && (
-          <div className="profile-tab-panel" role="tabpanel">
-            <div className="section-head">
+          <div className="grid gap-3" role="tabpanel">
+            <div className="mb-3 flex items-center justify-between gap-3">
               <h3>Stats by event</h3>
-              <span>{stats.eventCount} events</span>
+              <span className="text-[0.85rem] font-extrabold text-soft-muted">
+                {stats.eventCount} events
+              </span>
             </div>
-            <label className="select-label profile-event-select">
+            <label className="grid max-w-80 gap-1.5 text-[0.78rem] font-extrabold text-muted">
               Event
               <select
                 value={selectedEvent}
@@ -243,7 +278,9 @@ export function ProfilePage({
               selectedDayKey={selectedWeeklyDay?.key ?? null}
             />
             {selectedEvent === "all" && eventStats.length === 0 ? (
-              <p className="empty-state">No event stats yet.</p>
+              <p className="m-0 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
+                No event stats yet.
+              </p>
             ) : selectedEvent === "all" ? (
               <SelectedDaySessions
                 eventLabel="all events"
@@ -257,7 +294,7 @@ export function ProfilePage({
                 selectedDayLabel={selectedWeeklyDay?.label ?? ""}
               />
             ) : (
-              <p className="empty-state">
+              <p className="m-0 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
                 No public sessions logged for {selectedEvent} yet.
               </p>
             )}
@@ -265,13 +302,17 @@ export function ProfilePage({
         )}
 
         {activeTab === "sessions" && (
-          <div className="profile-tab-panel" role="tabpanel">
-            <div className="section-head">
+          <div className="grid gap-3" role="tabpanel">
+            <div className="mb-3 flex items-center justify-between gap-3">
               <h3>Recent sessions</h3>
-              <span>{profile.sessions.length} total</span>
+              <span className="text-[0.85rem] font-extrabold text-soft-muted">
+                {profile.sessions.length} total
+              </span>
             </div>
             {profile.sessions.length === 0 && (
-              <p className="empty-state">No public sessions yet.</p>
+              <p className="m-0 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
+                No public sessions yet.
+              </p>
             )}
             {profile.sessions.map((session) => (
               <ProfileSessionCard
@@ -310,13 +351,17 @@ function SelectedDaySessions({
     : `Selected day (${eventLabel}) sessions`;
 
   return (
-    <section className="selected-day-sessions">
-      <div className="section-head">
+    <section className="grid gap-3">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <h4>{heading}</h4>
-        <span>{sessions.length} total</span>
+        <span className="text-[0.85rem] font-extrabold text-soft-muted">
+          {sessions.length} total
+        </span>
       </div>
       {sessions.length === 0 ? (
-        <p className="empty-state">No sessions for this day.</p>
+        <p className="m-0 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
+          No sessions for this day.
+        </p>
       ) : (
         sessions.map((session) => (
           <ProfileSessionCard
