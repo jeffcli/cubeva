@@ -9,9 +9,9 @@ export function WeeklyProgressChart({
   progress: WeeklyProgress;
   selectedDayKey: string | null;
 }) {
-  const chartWidth = 600;
-  const chartHeight = 180;
-  const padding = { top: 20, right: 20, bottom: 30, left: 42 };
+  const chartWidth = 560;
+  const chartHeight = 205;
+  const padding = { top: 22, right: 20, bottom: 32, left: 42 };
   const plotWidth = chartWidth - padding.left - padding.right;
   const plotHeight = chartHeight - padding.top - padding.bottom;
   const selectedDay =

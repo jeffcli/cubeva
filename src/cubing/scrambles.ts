@@ -22,6 +22,31 @@ export function eventConfig(label: string) {
   return wcaEvents.find((event) => event.label === label) ?? wcaEvents[0];
 }
 
+export function puzzleIdForEvent(label: string) {
+  const eventId = eventIds[label] ?? "333";
+  const puzzleIds: Record<string, string> = {
+    "222": "2x2x2",
+    "333": "3x3x3",
+    "333bf": "3x3x3",
+    "333fm": "3x3x3",
+    "333mbf": "3x3x3",
+    "333oh": "3x3x3",
+    "444": "4x4x4",
+    "444bf": "4x4x4",
+    "555": "5x5x5",
+    "555bf": "5x5x5",
+    "666": "6x6x6",
+    "777": "7x7x7",
+    clock: "clock",
+    minx: "megaminx",
+    pyram: "pyraminx",
+    skewb: "skewb",
+    sq1: "square1",
+  };
+
+  return puzzleIds[eventId] ?? "3x3x3";
+}
+
 const eventIds = Object.fromEntries(
   wcaEvents.map((event) => [event.label, event.eventId]),
 );
