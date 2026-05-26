@@ -8,6 +8,8 @@ import { ProfilePage } from "./components/ProfilePage";
 import { TimerPage } from "./components/TimerPage";
 import { eventConfig, generateScramble } from "./cubing/scrambles";
 import {
+  addSessionComment,
+  deleteSessionComment,
   deleteSession,
   fetchDiscoverProfiles,
   fetchFollowingFeed,
@@ -18,8 +20,10 @@ import {
   getUserDisplay,
   errorMessage,
   saveSession,
+  setSessionKudos,
   setFollow,
   updateProfile,
+  type AppComment,
   type AppProfile,
   type AppSession,
   type AppSolve,
@@ -515,6 +519,8 @@ function CubeApp({
       createdAt: formatSessionTimestamp(createdAt),
       createdAtSort: createdAt,
       liked: false,
+      kudosCount: 0,
+      comments: [],
       solves,
     };
     setUserSessions((current) => [session, ...current]);
@@ -623,7 +629,7 @@ function CubeApp({
         const profile = await fetchProfile(person.id);
         if (profile) {
           wcaId = profile.wca_id ?? "";
-          sessions = await fetchPublicSessionsForProfile(profile);
+          sessions = await fetchPublicSessionsForProfile(profile, user.id);
           wcaPersonalBests = wcaId ? await fetchWcaPersonalBests(wcaId) : [];
         }
       } catch (error) {
@@ -722,6 +728,119 @@ function CubeApp({
     );
   }
 
+  function updateSessionById(
+    sessionId: string,
+    update: (session: AppSession) => AppSession,
+  ) {
+    const updateSessions = (sessions: AppSession[]) =>
+      sessions.map((session) =>
+        session.id === sessionId ? update(session) : session,
+      );
+
+    setUserSessions(updateSessions);
+    setFeedSessions(updateSessions);
+    setFollowing((current) =>
+      current.map((person) => ({
+        ...person,
+        sessions: updateSessions(person.sessions),
+      })),
+    );
+    setSelectedProfile((current) =>
+      current
+        ? {
+            ...current,
+            sessions: updateSessions(current.sessions),
+          }
+        : current,
+    );
+  }
+
+  async function toggleSessionKudos(session: AppSession) {
+    const nextLiked = !session.liked;
+
+    updateSessionById(session.id, (current) => ({
+      ...current,
+      liked: nextLiked,
+      kudosCount: Math.max(0, current.kudosCount + (nextLiked ? 1 : -1)),
+    }));
+
+    if (!user || demoMode) return;
+
+    try {
+      await setSessionKudos({
+        sessionId: session.id,
+        userId: user.id,
+        liked: nextLiked,
+      });
+    } catch (error) {
+      updateSessionById(session.id, (current) => ({
+        ...current,
+        liked: session.liked,
+        kudosCount: session.kudosCount,
+      }));
+      setSessionMessage(errorMessage(error, "Could not update kudos."));
+    }
+  }
+
+  async function addFeedComment(session: AppSession, body: string) {
+    const trimmedBody = body.trim();
+    if (!trimmedBody) return;
+
+    let comment: AppComment;
+
+    if (user && !demoMode) {
+      try {
+        comment = await addSessionComment({
+          body: trimmedBody,
+          sessionId: session.id,
+          user,
+        });
+      } catch (error) {
+        setSessionMessage(errorMessage(error, "Could not add comment."));
+        return;
+      }
+    } else {
+      const createdAt = new Date().toISOString();
+      comment = {
+        id: crypto.randomUUID(),
+        sessionId: session.id,
+        userId: userId ?? "demo-user",
+        user: displayName,
+        avatar: initials,
+        body: trimmedBody,
+        createdAt: formatSessionTimestamp(createdAt),
+        createdAtSort: createdAt,
+      };
+    }
+
+    updateSessionById(session.id, (current) => ({
+      ...current,
+      comments: [...current.comments, comment],
+    }));
+  }
+
+  async function deleteFeedComment(session: AppSession, comment: AppComment) {
+    updateSessionById(session.id, (current) => ({
+      ...current,
+      comments: current.comments.filter((item) => item.id !== comment.id),
+    }));
+
+    if (!user || demoMode) return;
+
+    try {
+      await deleteSessionComment(comment.id);
+    } catch (error) {
+      updateSessionById(session.id, (current) => ({
+        ...current,
+        comments: [...current.comments, comment].sort(
+          (a, b) =>
+            Date.parse(a.createdAtSort) - Date.parse(b.createdAtSort),
+        ),
+      }));
+      setSessionMessage(errorMessage(error, "Could not delete comment."));
+    }
+  }
+
   return (
     <main className="grid min-h-screen gap-[22px] p-[22px] [grid-template-columns:260px_minmax(360px,1fr)] max-[1120px]:[grid-template-columns:210px_minmax(0,1fr)] max-[760px]:flex max-[760px]:flex-col max-[760px]:p-3.5">
       <AppSidebar
@@ -804,6 +923,11 @@ function CubeApp({
         <FeedPage
           sessions={chronologicalFeedSessions}
           loading={sessionsLoading}
+          onAddComment={addFeedComment}
+          onDeleteComment={deleteFeedComment}
+          onToggleKudos={toggleSessionKudos}
+          userId={userId}
+          demoMode={demoMode}
         />
       </section>
 

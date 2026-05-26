@@ -16,6 +16,19 @@ export const starterSessions: AppSession[] = [
     createdAt: formatSessionTimestamp(lunchSessionCreatedAt),
     createdAtSort: lunchSessionCreatedAt,
     liked: true,
+    kudosCount: 8,
+    comments: [
+      {
+        id: "c1",
+        sessionId: "s1",
+        userId: "u2",
+        user: "Sam Rivera",
+        avatar: "SR",
+        body: "That 17.32 is clean.",
+        createdAt: formatSessionTimestamp(new Date(now - 1000 * 60 * 20).toISOString()),
+        createdAtSort: new Date(now - 1000 * 60 * 20).toISOString(),
+      },
+    ],
     solves: [
       makeSolve(18740, "ok"),
       makeSolve(17990, "ok"),
@@ -33,6 +46,8 @@ export const starterSessions: AppSession[] = [
     createdAt: formatSessionTimestamp(ohSessionCreatedAt),
     createdAtSort: ohSessionCreatedAt,
     liked: false,
+    kudosCount: 3,
+    comments: [],
     solves: [
       makeSolve(31240, "ok"),
       makeSolve(29870, "ok"),
@@ -113,6 +128,8 @@ function makeCandidateSession(
     createdAt: formatSessionTimestamp(createdAt),
     createdAtSort: createdAt,
     liked: false,
+    kudosCount: 0,
+    comments: [],
     solves: times.map((time) => makeSolve(time, "ok")),
   };
 }

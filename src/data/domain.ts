@@ -19,6 +19,19 @@ export type AppSession = {
   createdAt: string;
   createdAtSort?: string;
   liked: boolean;
+  kudosCount: number;
+  comments: AppComment[];
+};
+
+export type AppComment = {
+  id: string;
+  sessionId: string;
+  userId: string;
+  user: string;
+  avatar: string;
+  body: string;
+  createdAt: string;
+  createdAtSort: string;
 };
 
 export type AppProfile = {

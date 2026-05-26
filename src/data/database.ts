@@ -2,6 +2,7 @@ import type { User } from "@supabase/supabase-js";
 import type {
   AppProfile,
   AppSession,
+  AppComment,
   AppSolve,
   Penalty,
   SocialProfile,
@@ -10,6 +11,7 @@ import type {
 export type {
   AppProfile,
   AppSession,
+  AppComment,
   AppSolve,
   Penalty,
   SocialProfile,
@@ -50,6 +52,26 @@ type SessionRow = {
   title: string;
   created_at: string;
   solves: SolveRow[];
+};
+
+type KudoRow = {
+  session_id: string;
+  user_id: string;
+};
+
+type CommentRow = {
+  id: string;
+  session_id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
+  profiles: AppProfile | AppProfile[] | null;
+};
+
+type SessionSocialData = {
+  comments: AppComment[];
+  kudosCount: number;
+  liked: boolean;
 };
 
 type WcaPersonalBestRow = {
@@ -161,7 +183,7 @@ export async function fetchUserSessions(user: User): Promise<AppSession[]> {
   const profile = await fetchProfile(user.id);
   if (!profile) return [];
 
-  return fetchPublicSessionsForProfile(profile);
+  return fetchPublicSessionsForProfile(profile, user.id);
 }
 
 export async function fetchDiscoverProfiles(userId: string): Promise<SocialProfile[]> {
@@ -172,7 +194,7 @@ export async function fetchDiscoverProfiles(userId: string): Promise<SocialProfi
     fetchProfilesExcept(userId),
   ]);
 
-  const sessionsByUser = await fetchPublicSessionsForUsers(profiles);
+  const sessionsByUser = await fetchPublicSessionsForUsers(profiles, userId);
 
   return profiles.map((profile) => {
     const display = getUserDisplay(null, profile);
@@ -199,15 +221,18 @@ export async function fetchFollowingFeed(userId: string): Promise<AppSession[]> 
   if (!followingIds.size) return [];
 
   const profiles = await fetchProfilesByIds([...followingIds]);
-  const sessionsByUser = await fetchPublicSessionsForUsers(profiles);
+  const sessionsByUser = await fetchPublicSessionsForUsers(profiles, userId);
 
   return [...sessionsByUser.values()]
     .flat()
     .sort((a, b) => Date.parse(b.createdAtSort ?? b.createdAt) - Date.parse(a.createdAtSort ?? a.createdAt));
 }
 
-export async function fetchPublicSessionsForProfile(profile: AppProfile): Promise<AppSession[]> {
-  const sessionsByUser = await fetchPublicSessionsForUsers([profile]);
+export async function fetchPublicSessionsForProfile(
+  profile: AppProfile,
+  viewerId?: string,
+): Promise<AppSession[]> {
+  const sessionsByUser = await fetchPublicSessionsForUsers([profile], viewerId);
   return sessionsByUser.get(profile.id) ?? [];
 }
 
@@ -278,7 +303,10 @@ async function fetchProfilesByIds(ids: string[]): Promise<AppProfile[]> {
   return (data as AppProfile[] | null) ?? [];
 }
 
-async function fetchPublicSessionsForUsers(profiles: AppProfile[]) {
+async function fetchPublicSessionsForUsers(
+  profiles: AppProfile[],
+  viewerId?: string,
+) {
   if (!supabase || !profiles.length) return new Map<string, AppSession[]>();
 
   const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
@@ -292,13 +320,22 @@ async function fetchPublicSessionsForUsers(profiles: AppProfile[]) {
 
   if (error) throw error;
 
+  const socialDataBySession = await fetchSessionSocialData(
+    ((data as SessionRow[] | null) ?? []).map((session) => session.id),
+    viewerId,
+  );
   const grouped = new Map<string, AppSession[]>();
 
   for (const session of (data as SessionRow[] | null) ?? []) {
     const profile = profileMap.get(session.user_id);
     if (!profile) continue;
     const display = getUserDisplay(null, profile);
-    const appSession = mapSessionRow(session, display.displayName, display.initials);
+    const appSession = mapSessionRow(
+      session,
+      display.displayName,
+      display.initials,
+      socialDataBySession.get(session.id),
+    );
     grouped.set(session.user_id, [...(grouped.get(session.user_id) ?? []), appSession]);
   }
 
@@ -361,6 +398,8 @@ export async function saveSession({
     createdAt: formatSessionTimestamp(session.created_at),
     createdAtSort: session.created_at,
     liked: false,
+    kudosCount: 0,
+    comments: [],
     solves: ((savedSolves as SolveRow[] | null) ?? []).map((solve) => ({
       id: solve.id,
       timeMs: solve.time_ms,
@@ -381,6 +420,73 @@ export async function deleteSession(sessionId: string) {
     .eq("id", sessionId);
 
   if (error) throw new Error(errorMessage(error, "Could not delete session."));
+}
+
+export async function setSessionKudos({
+  sessionId,
+  userId,
+  liked,
+}: {
+  sessionId: string;
+  userId: string;
+  liked: boolean;
+}) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  if (liked) {
+    const { error } = await supabase
+      .from("session_kudos")
+      .upsert({ session_id: sessionId, user_id: userId });
+
+    if (error) throw new Error(errorMessage(error, "Could not add kudos."));
+    return;
+  }
+
+  const { error } = await supabase
+    .from("session_kudos")
+    .delete()
+    .eq("session_id", sessionId)
+    .eq("user_id", userId);
+
+  if (error) throw new Error(errorMessage(error, "Could not remove kudos."));
+}
+
+export async function addSessionComment({
+  body,
+  sessionId,
+  user,
+}: {
+  body: string;
+  sessionId: string;
+  user: User;
+}): Promise<AppComment> {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  await ensureProfile(user);
+
+  const { data, error } = await supabase
+    .from("session_comments")
+    .insert({
+      body: body.trim(),
+      session_id: sessionId,
+      user_id: user.id,
+    })
+    .select(`id, session_id, user_id, body, created_at, profiles:user_id (${profileColumns})`)
+    .single();
+
+  if (error) throw new Error(errorMessage(error, "Could not add comment."));
+
+  return mapCommentRow(data as CommentRow);
+}
+
+export async function deleteSessionComment(commentId: string) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const { error } = await supabase
+    .from("session_comments")
+    .delete()
+    .eq("id", commentId);
+
+  if (error) throw new Error(errorMessage(error, "Could not delete comment."));
 }
 
 async function ensureProfile(user: User) {
@@ -407,7 +513,12 @@ async function ensureProfile(user: User) {
   if (error) throw new Error(errorMessage(error, "Could not create profile."));
 }
 
-function mapSessionRow(session: SessionRow, user: string, avatar: string): AppSession {
+function mapSessionRow(
+  session: SessionRow,
+  user: string,
+  avatar: string,
+  socialData: SessionSocialData = { comments: [], kudosCount: 0, liked: false },
+): AppSession {
   return {
     id: session.id,
     user,
@@ -416,7 +527,9 @@ function mapSessionRow(session: SessionRow, user: string, avatar: string): AppSe
     title: session.title,
     createdAt: formatSessionTimestamp(session.created_at),
     createdAtSort: session.created_at,
-    liked: false,
+    liked: socialData.liked,
+    kudosCount: socialData.kudosCount,
+    comments: socialData.comments,
     solves: session.solves.map((solve) => ({
       id: solve.id,
       timeMs: solve.time_ms,
@@ -425,6 +538,66 @@ function mapSessionRow(session: SessionRow, user: string, avatar: string): AppSe
       createdAt: solve.created_at,
       resultType: parseSolveResultType(solve),
     })),
+  };
+}
+
+async function fetchSessionSocialData(sessionIds: string[], viewerId?: string) {
+  const socialData = new Map<string, SessionSocialData>();
+  for (const sessionId of sessionIds) {
+    socialData.set(sessionId, { comments: [], kudosCount: 0, liked: false });
+  }
+
+  if (!supabase || !sessionIds.length) return socialData;
+
+  try {
+    const [kudosResponse, commentsResponse] = await Promise.all([
+      supabase
+        .from("session_kudos")
+        .select("session_id, user_id")
+        .in("session_id", sessionIds),
+      supabase
+        .from("session_comments")
+        .select(`id, session_id, user_id, body, created_at, profiles:user_id (${profileColumns})`)
+        .in("session_id", sessionIds)
+        .order("created_at", { ascending: true }),
+    ]);
+
+    if (kudosResponse.error) throw kudosResponse.error;
+    if (commentsResponse.error) throw commentsResponse.error;
+
+    for (const kudo of (kudosResponse.data as KudoRow[] | null) ?? []) {
+      const sessionSocialData = socialData.get(kudo.session_id);
+      if (!sessionSocialData) continue;
+      sessionSocialData.kudosCount += 1;
+      sessionSocialData.liked =
+        sessionSocialData.liked || Boolean(viewerId && kudo.user_id === viewerId);
+    }
+
+    for (const comment of (commentsResponse.data as CommentRow[] | null) ?? []) {
+      const sessionSocialData = socialData.get(comment.session_id);
+      if (!sessionSocialData) continue;
+      sessionSocialData.comments.push(mapCommentRow(comment));
+    }
+  } catch {
+    return socialData;
+  }
+
+  return socialData;
+}
+
+function mapCommentRow(row: CommentRow): AppComment {
+  const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+  const display = getUserDisplay(null, profile);
+
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    userId: row.user_id,
+    user: display.displayName,
+    avatar: display.initials,
+    body: row.body,
+    createdAt: formatSessionTimestamp(row.created_at),
+    createdAtSort: row.created_at,
   };
 }
 

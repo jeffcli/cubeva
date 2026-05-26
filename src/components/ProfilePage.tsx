@@ -251,7 +251,12 @@ export function ProfilePage({
 
         {activeTab === "events" && (
           <div className="grid gap-3" role="tabpanel">
-            <div className="mb-3 flex items-center justify-between gap-3"></div>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h3>Stats by event</h3>
+              <span className="text-[0.85rem] font-extrabold text-soft-muted">
+                {stats.eventCount} events
+              </span>
+            </div>
             <label className="grid max-w-80 gap-1.5 text-[0.78rem] font-extrabold text-muted">
               Event
               <select
@@ -346,6 +351,12 @@ function SelectedDaySessions({
 
   return (
     <section className="grid gap-3">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h4>{heading}</h4>
+        <span className="text-[0.85rem] font-extrabold text-soft-muted">
+          {sessions.length} total
+        </span>
+      </div>
       {sessions.length === 0 ? (
         <p className="m-0 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
           No sessions for this day.
