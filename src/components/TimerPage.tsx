@@ -1,4 +1,12 @@
-import { Activity, Clock, Flame, Play, Plus, Square, Timer, Trash2, Trophy } from "lucide-react";
+import {
+  Activity,
+  Clock,
+  Flame,
+  Plus,
+  Timer,
+  Trash2,
+  Trophy,
+} from "lucide-react";
 import { Metric } from "./Metric";
 import { ScramblePreview } from "./ScramblePreview";
 import { wcaEvents } from "../cubing/scrambles";
@@ -22,15 +30,12 @@ export function TimerPage({
   importText,
   inspectionAvailable,
   inspectionElapsed,
-  inspectionEnabled,
-  inspectionPenalty,
   isManualOnlyEvent,
   manualPenalty,
   manualTime,
   nextScramble,
   onDeleteSolve,
   onImportTextChange,
-  onInspectionEnabledChange,
   onManualPenaltyChange,
   onManualTimeChange,
   onPuzzleChange,
@@ -79,14 +84,7 @@ export function TimerPage({
   return (
     <section className="flex min-w-0 flex-col gap-4" id="timer">
       <header className="flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-stretch">
-        <div>
-          <p className="m-0 text-[0.72rem] font-black uppercase text-soft-muted">
-            Current session
-          </p>
-          <h2 className="m-0 max-w-[720px] text-[clamp(1.55rem,2.4vw,2.7rem)] leading-[1.05]">
-            Log solves, track progress, keep up with friends.
-          </h2>
-        </div>
+        <div></div>
         <label className="grid gap-1.5 text-[0.78rem] font-extrabold text-muted">
           Event
           <select
@@ -130,36 +128,9 @@ export function TimerPage({
                     ? Math.max(0, 15 - Math.floor(inspectionElapsed / 1000))
                     : "Ready"}
               </span>
-              <small className="mt-2 block font-extrabold text-ink">
-                {timerState === "running"
-                  ? `tap to stop and save${inspectionPenalty !== "ok" ? ` (${inspectionPenalty.toUpperCase()})` : ""}`
-                  : timerState === "inspection"
-                    ? "tap when inspection is done"
-                    : inspectionAvailable && inspectionEnabled
-                      ? "tap to start inspection"
-                      : "tap to start timer"}
-              </small>
             </button>
           )}
           <div className="flex flex-wrap items-center gap-3">
-            {!isManualOnlyEvent && (
-              <button
-                className="min-h-11 bg-ink px-3.5 text-white"
-                type="button"
-                onClick={toggleTimer}
-              >
-                {timerState === "running" ? (
-                  <Square size={18} />
-                ) : (
-                  <Play size={18} />
-                )}{" "}
-                {timerState === "running"
-                  ? "Stop"
-                  : timerState === "inspection"
-                    ? "Start Solve"
-                    : "Start"}
-              </button>
-            )}
             <button
               className="min-h-11 bg-ink px-3.5 text-white"
               type="button"
@@ -174,21 +145,11 @@ export function TimerPage({
               onClick={publishSession}
               disabled={publishing || !solves.length}
             >
-              <Plus size={18} /> {publishing ? "Publishing..." : "Publish Session"}
+              <Plus size={18} />{" "}
+              {publishing ? "Publishing..." : "Publish Session"}
             </button>
           </div>
-          {inspectionAvailable && (
-            <label className="inline-flex items-center gap-2.5 font-extrabold text-[#34413d] [&_input]:min-h-0 [&_input]:w-[18px]">
-              <input
-                type="checkbox"
-                checked={inspectionEnabled}
-                onChange={(event) =>
-                  onInspectionEnabledChange(event.target.checked)
-                }
-              />
-              15-second WCA inspection
-            </label>
-          )}
+
           {!inspectionAvailable && !isManualOnlyEvent && (
             <p className="m-0 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
               No WCA inspection for this event.
@@ -206,7 +167,11 @@ export function TimerPage({
         )}
 
         <section className="col-span-full grid grid-cols-6 gap-2.5 max-[1180px]:grid-cols-3 max-[760px]:grid-cols-2">
-          <Metric icon={<Clock size={18} />} label="Latest" value={stats.latest} />
+          <Metric
+            icon={<Clock size={18} />}
+            label="Latest"
+            value={stats.latest}
+          />
           <Metric icon={<Trophy size={18} />} label="Best" value={stats.best} />
           <Metric
             icon={<Activity size={18} />}
@@ -224,7 +189,9 @@ export function TimerPage({
       </section>
 
       <section className="rounded-lg border border-line bg-card p-4 shadow-[0_18px_45px_rgba(29,35,32,0.08)]">
-        <h3 className="m-0">{isManualOnlyEvent ? "FMC entry" : "Manual log"}</h3>
+        <h3 className="m-0">
+          {isManualOnlyEvent ? "FMC entry" : "Manual log"}
+        </h3>
         <div className="mt-3 flex items-center gap-3 max-[760px]:flex-col max-[760px]:items-stretch [&_input]:min-w-[120px] [&_input]:flex-1">
           <input
             inputMode={isManualOnlyEvent ? "numeric" : "decimal"}
@@ -266,7 +233,8 @@ export function TimerPage({
             type="button"
             onClick={importSolves}
           >
-            <Plus size={18} /> {isManualOnlyEvent ? "Import Results" : "Import Times"}
+            <Plus size={18} />{" "}
+            {isManualOnlyEvent ? "Import Results" : "Import Times"}
           </button>
         </div>
       </section>

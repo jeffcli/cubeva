@@ -12,17 +12,7 @@ export function FeedPage({
   return (
     <>
       <header className="flex items-end justify-between gap-4 max-[760px]:flex-col max-[760px]:items-stretch">
-        <div>
-          <p className="m-0 text-[0.72rem] font-black uppercase text-soft-muted">
-            Following
-          </p>
-          <h2 className="m-0 text-[clamp(2rem,4vw,3.6rem)] leading-[0.98]">
-            Recent cubing activity
-          </h2>
-        </div>
-        <span className="m-0 font-black text-soft-muted">
-          {loading ? "Loading" : `${sessions.length} sessions`}
-        </span>
+        <div></div>
       </header>
 
       <section className="grid gap-4">

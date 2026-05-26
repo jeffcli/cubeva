@@ -66,7 +66,6 @@ export function ScramblePreview({
   return (
     <section className="grid h-full grid-rows-[auto_minmax(0,1fr)] gap-3 rounded-lg border border-panel-border bg-panel p-3.5">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="m-0 text-[1rem]">Scramble drawing</h3>
         <span className="text-[0.78rem] font-extrabold text-muted">
           {eventLabel}
         </span>
