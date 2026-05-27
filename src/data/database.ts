@@ -3,7 +3,9 @@ import type {
   AppProfile,
   AppSession,
   AppComment,
+  AppNotification,
   AppSolve,
+  NotificationType,
   Penalty,
   SocialProfile,
   WcaPersonalBest,
@@ -12,7 +14,9 @@ export type {
   AppProfile,
   AppSession,
   AppComment,
+  AppNotification,
   AppSolve,
+  NotificationType,
   Penalty,
   SocialProfile,
   WcaPersonalBest,
@@ -74,6 +78,18 @@ type SessionSocialData = {
   liked: boolean;
 };
 
+type NotificationRow = {
+  id: string;
+  recipient_id: string;
+  actor_id: string;
+  type: NotificationType;
+  session_id: string | null;
+  message: string;
+  read: boolean;
+  created_at: string;
+  actor: AppProfile | AppProfile[] | null;
+};
+
 type WcaPersonalBestRow = {
   wca_id: string;
   event_id: string;
@@ -91,10 +107,10 @@ type WcaPersonalBestRow = {
 
 export function getUserDisplay(user: User | null, profile?: AppProfile | null) {
   const displayName = String(
-    profile?.display_name ||
+      profile?.display_name ||
       user?.user_metadata.display_name ||
       user?.email?.split("@")[0] ||
-      "Demo Cuber",
+      "CubeVa Cuber",
   );
   const username = String(
     profile?.username ||
@@ -226,6 +242,74 @@ export async function fetchFollowingFeed(userId: string): Promise<AppSession[]> 
   return [...sessionsByUser.values()]
     .flat()
     .sort((a, b) => Date.parse(b.createdAtSort ?? b.createdAt) - Date.parse(a.createdAtSort ?? a.createdAt));
+}
+
+export async function fetchNotifications(userId: string): Promise<AppNotification[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("notifications")
+    .select(`id, recipient_id, actor_id, type, session_id, message, read, created_at, actor:actor_id (${profileColumns})`)
+    .eq("recipient_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    const message = errorMessage(error).toLowerCase();
+    if (
+      message.includes("notifications") &&
+      (message.includes("does not exist") ||
+        message.includes("schema cache"))
+    ) {
+      return [];
+    }
+    throw error;
+  }
+
+  return ((data as NotificationRow[] | null) ?? []).map(mapNotificationRow);
+}
+
+export async function createNotification({
+  actorId,
+  message,
+  recipientId,
+  sessionId,
+  type,
+}: {
+  actorId: string;
+  message: string;
+  recipientId: string;
+  sessionId?: string | null;
+  type: NotificationType;
+}): Promise<AppNotification | null> {
+  if (!supabase || actorId === recipientId) return null;
+
+  const { data, error } = await supabase
+    .from("notifications")
+    .insert({
+      actor_id: actorId,
+      message,
+      recipient_id: recipientId,
+      session_id: sessionId ?? null,
+      type,
+    })
+    .select(`id, recipient_id, actor_id, type, session_id, message, read, created_at, actor:actor_id (${profileColumns})`)
+    .single();
+
+  if (error) throw new Error(errorMessage(error, "Could not create notification."));
+  return mapNotificationRow(data as NotificationRow);
+}
+
+export async function markNotificationsRead(userId: string) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("recipient_id", userId)
+    .eq("read", false);
+
+  if (error) throw new Error(errorMessage(error, "Could not update notifications."));
 }
 
 export async function fetchPublicSessionsForProfile(
@@ -391,6 +475,7 @@ export async function saveSession({
 
   return {
     id: session.id,
+    userId: user.id,
     user: display.displayName,
     avatar: display.initials,
     puzzle: session.puzzle,
@@ -521,6 +606,7 @@ function mapSessionRow(
 ): AppSession {
   return {
     id: session.id,
+    userId: session.user_id,
     user,
     avatar,
     puzzle: session.puzzle,
@@ -538,6 +624,24 @@ function mapSessionRow(
       createdAt: solve.created_at,
       resultType: parseSolveResultType(solve),
     })),
+  };
+}
+
+function mapNotificationRow(row: NotificationRow): AppNotification {
+  const actor = Array.isArray(row.actor) ? row.actor[0] : row.actor;
+  const display = getUserDisplay(null, actor);
+
+  return {
+    id: row.id,
+    type: row.type,
+    actorId: row.actor_id,
+    actorName: display.displayName,
+    actorAvatar: display.initials,
+    message: row.message,
+    sessionId: row.session_id,
+    read: row.read,
+    createdAt: formatSessionTimestamp(row.created_at),
+    createdAtSort: row.created_at,
   };
 }
 

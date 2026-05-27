@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { Metric } from "./Metric";
 import { ScramblePreview } from "./ScramblePreview";
-import { wcaEvents } from "../cubing/scrambles";
 import type { AppSolve, Penalty } from "../data/database";
 import type { TimerState } from "../types/app";
 import { formatSolveResult, formatTime } from "../utils/solveUtils";
@@ -83,24 +82,12 @@ export function TimerPage({
 }) {
   return (
     <section className="flex min-w-0 flex-col gap-4" id="timer">
-      <header className="flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-stretch">
-        <div></div>
-        <label className="grid gap-1.5 text-[0.78rem] font-extrabold text-muted">
-          Event
-          <select
-            value={puzzle}
-            onChange={(event) => onPuzzleChange(event.target.value)}
-          >
-            {wcaEvents.map((event) => (
-              <option key={event.eventId}>{event.label}</option>
-            ))}
-          </select>
-        </label>
-      </header>
-
       <section className="grid items-stretch gap-4 [grid-template-columns:minmax(0,1.05fr)_minmax(340px,0.95fr)] max-[980px]:grid-cols-1">
         <section className="grid h-full gap-4 rounded-lg border border-line bg-card p-5 shadow-[0_18px_45px_rgba(29,35,32,0.08)]">
-          <div className="rounded-lg bg-ink p-3.5 text-center font-mono text-[clamp(0.9rem,1.3vw,1.15rem)] text-[#f8f2e7]">
+          <div
+            aria-label="Current scramble"
+            className="rounded-lg bg-ink p-3.5 text-center font-mono text-[clamp(0.9rem,1.3vw,1.15rem)] text-[#f8f2e7]"
+          >
             {scrambleLoading ? "Generating scramble..." : currentScramble}
           </div>
           {isManualOnlyEvent ? (
@@ -119,6 +106,7 @@ export function TimerPage({
                     ? "bg-panel"
                     : "bg-gold"
               }`}
+              type="button"
               onClick={toggleTimer}
             >
               <span className="text-[clamp(4.4rem,10vw,8.4rem)] leading-[0.95] [font-variant-numeric:tabular-nums]">
@@ -162,9 +150,12 @@ export function TimerPage({
           )}
         </section>
 
-        {!scrambleLoading && (
-          <ScramblePreview eventLabel={puzzle} scramble={currentScramble} />
-        )}
+        <ScramblePreview
+          eventLabel={puzzle}
+          loading={scrambleLoading}
+          onEventChange={onPuzzleChange}
+          scramble={currentScramble}
+        />
 
         <section className="col-span-full grid grid-cols-6 gap-2.5 max-[1180px]:grid-cols-3 max-[760px]:grid-cols-2">
           <Metric

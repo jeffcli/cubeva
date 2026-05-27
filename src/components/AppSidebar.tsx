@@ -3,13 +3,11 @@ import type { AppView } from "../types/app";
 
 export function AppSidebar({
   activeView,
-  demoMode,
   onNavigate,
   onShowProfile,
   onSignOut,
 }: {
   activeView: AppView;
-  demoMode: boolean;
   onNavigate: (view: AppView) => void;
   onShowProfile: () => void;
   onSignOut: () => void;
@@ -30,7 +28,7 @@ export function AppSidebar({
         type="button"
         onClick={onSignOut}
       >
-        <LogOut size={17} /> {demoMode ? "Exit demo" : "Sign out"}
+        <LogOut size={17} /> Sign out
       </button>
 
       <nav className="grid gap-2" aria-label="Primary">

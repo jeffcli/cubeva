@@ -4,7 +4,6 @@ import type { AppComment, AppSession } from "../data/database";
 import { average, bestTime, formatSolveResult } from "../utils/solveUtils";
 
 export function FeedPage({
-  demoMode,
   onAddComment,
   onDeleteComment,
   onToggleKudos,
@@ -12,7 +11,6 @@ export function FeedPage({
   loading,
   userId,
 }: {
-  demoMode: boolean;
   onAddComment: (session: AppSession, body: string) => void;
   onDeleteComment: (session: AppSession, comment: AppComment) => void;
   onToggleKudos: (session: AppSession) => void;
@@ -39,7 +37,6 @@ export function FeedPage({
         )}
         {sessions.map((session) => (
           <FeedCard
-            demoMode={demoMode}
             onAddComment={onAddComment}
             onDeleteComment={onDeleteComment}
             onToggleKudos={onToggleKudos}
@@ -54,14 +51,12 @@ export function FeedPage({
 }
 
 function FeedCard({
-  demoMode,
   onAddComment,
   onDeleteComment,
   onToggleKudos,
   session,
   userId,
 }: {
-  demoMode: boolean;
   onAddComment: (session: AppSession, body: string) => void;
   onDeleteComment: (session: AppSession, comment: AppComment) => void;
   onToggleKudos: (session: AppSession) => void;
@@ -170,7 +165,7 @@ function FeedCard({
                       </small>
                     </div>
                     </div>
-                    {(demoMode || comment.userId === userId) && (
+                    {comment.userId === userId && (
                       <button
                         aria-label={`Delete comment by ${comment.user}`}
                         className="h-8 w-8 bg-[#fff2ed] p-0 text-[#b4331f] hover:bg-accent hover:text-white"

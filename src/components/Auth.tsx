@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { isSupabaseConfigured, supabase } from "../services/supabase";
 
-export function AuthScreen({ onDemo }: { onDemo: () => void }) {
+export function AuthScreen() {
   const [mode, setMode] = useState<"signin" | "signup">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -69,13 +69,6 @@ export function AuthScreen({ onDemo }: { onDemo: () => void }) {
             <br />
             VITE_SUPABASE_ANON_KEY=your-anon-key
           </div>
-          <button
-            className="min-h-[46px] bg-ink px-4 text-white"
-            type="button"
-            onClick={onDemo}
-          >
-            Continue in demo mode
-          </button>
         </section>
       </AuthShell>
     );
@@ -164,13 +157,6 @@ export function AuthScreen({ onDemo }: { onDemo: () => void }) {
           {mode === "signup"
             ? "Already have an account? Sign in"
             : "Need an account? Sign up"}
-        </button>
-        <button
-          className="min-h-0 justify-self-start bg-transparent p-0 text-teal"
-          type="button"
-          onClick={onDemo}
-        >
-          Continue in demo mode
         </button>
       </section>
     </AuthShell>

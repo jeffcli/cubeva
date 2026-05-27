@@ -69,11 +69,25 @@ create table public.session_comments (
   created_at timestamptz default now() not null
 );
 
+create table public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  recipient_id uuid references public.profiles(id) on delete cascade not null,
+  actor_id uuid references public.profiles(id) on delete cascade not null,
+  type text not null check (type in ('comment', 'follow', 'kudos')),
+  session_id uuid references public.sessions(id) on delete cascade,
+  message text not null,
+  read boolean default false not null,
+  created_at timestamptz default now() not null,
+  check (recipient_id <> actor_id)
+);
+
 create index sessions_user_created_idx on public.sessions (user_id, created_at desc);
 create index solves_session_created_idx on public.solves (session_id, created_at desc);
 create index follows_following_idx on public.follows (following_id);
 create index session_kudos_user_idx on public.session_kudos (user_id);
 create index session_comments_session_created_idx on public.session_comments (session_id, created_at asc);
+create index notifications_recipient_created_idx on public.notifications (recipient_id, created_at desc);
+create index notifications_unread_idx on public.notifications (recipient_id, read) where read = false;
 
 alter table public.profiles enable row level security;
 alter table public.wca_personal_bests enable row level security;
@@ -82,6 +96,7 @@ alter table public.sessions enable row level security;
 alter table public.solves enable row level security;
 alter table public.session_kudos enable row level security;
 alter table public.session_comments enable row level security;
+alter table public.notifications enable row level security;
 
 create policy "Profiles are visible to everyone"
   on public.profiles for select
@@ -181,6 +196,19 @@ create policy "Users can insert their own comments"
 create policy "Users can delete their own comments"
   on public.session_comments for delete
   using (auth.uid() = user_id);
+
+create policy "Users can read their own notifications"
+  on public.notifications for select
+  using (auth.uid() = recipient_id);
+
+create policy "Users can create notifications as themselves"
+  on public.notifications for insert
+  with check (auth.uid() = actor_id and auth.uid() <> recipient_id);
+
+create policy "Users can mark their own notifications read"
+  on public.notifications for update
+  using (auth.uid() = recipient_id)
+  with check (auth.uid() = recipient_id);
 
 create function public.handle_new_user()
 returns trigger

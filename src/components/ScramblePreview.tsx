@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { puzzleIdForEvent } from "../cubing/scrambles";
+import { puzzleIdForEvent, wcaEvents } from "../cubing/scrambles";
 
 export function ScramblePreview({
   eventLabel,
+  loading,
+  onEventChange,
   scramble,
 }: {
   eventLabel: string;
+  loading: boolean;
+  onEventChange: (eventLabel: string) => void;
   scramble: string;
 }) {
   const previewRef = useRef<HTMLDivElement | null>(null);
@@ -17,10 +21,12 @@ export function ScramblePreview({
 
     async function drawScramble() {
       const previewElement = previewRef.current;
-      if (!previewElement || !scramble.trim()) return;
+      if (!previewElement) return;
 
       previewElement.replaceChildren();
       setError("");
+
+      if (loading || !scramble.trim()) return;
 
       try {
         const [{ puzzles }, { ExperimentalSVGAnimator }] = await Promise.all([
@@ -61,19 +67,32 @@ export function ScramblePreview({
       cancelled = true;
       wrapperElement?.remove();
     };
-  }, [eventLabel, scramble]);
+  }, [eventLabel, loading, scramble]);
 
   return (
     <section className="grid h-full grid-rows-[auto_minmax(0,1fr)] gap-3 rounded-lg border border-panel-border bg-panel p-3.5">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[0.78rem] font-extrabold text-muted">
-          {eventLabel}
-        </span>
+        <select
+          className="min-h-10 w-full max-w-[220px] bg-card"
+          aria-label="Timer event"
+          value={eventLabel}
+          onChange={(event) => onEventChange(event.target.value)}
+        >
+          {wcaEvents.map((event) => (
+            <option key={event.eventId} value={event.label}>
+              {event.label}
+            </option>
+          ))}
+        </select>
       </div>
-      <div
-        className="relative grid min-h-[320px] place-items-center overflow-hidden rounded-lg bg-card max-[760px]:min-h-[280px]"
-        ref={previewRef}
-      />
+      <div className="relative grid min-h-[320px] place-items-center overflow-hidden rounded-lg bg-card max-[760px]:min-h-[280px]">
+        <div className="absolute inset-0" ref={previewRef} />
+        {loading && (
+          <span className="relative z-10 font-bold text-soft-muted">
+            Drawing scramble...
+          </span>
+        )}
+      </div>
       {error && (
         <p className="m-0 rounded-lg bg-[#fff2ed] p-3 font-bold text-[#b4331f]">
           {error}

@@ -11,6 +11,7 @@ export type AppSolve = {
 
 export type AppSession = {
   id: string;
+  userId: string;
   user: string;
   avatar: string;
   puzzle: string;
@@ -21,6 +22,21 @@ export type AppSession = {
   liked: boolean;
   kudosCount: number;
   comments: AppComment[];
+};
+
+export type NotificationType = "comment" | "follow" | "kudos";
+
+export type AppNotification = {
+  id: string;
+  type: NotificationType;
+  actorId: string;
+  actorName: string;
+  actorAvatar: string;
+  message: string;
+  sessionId: string | null;
+  read: boolean;
+  createdAt: string;
+  createdAtSort: string;
 };
 
 export type AppComment = {

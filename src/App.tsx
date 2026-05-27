@@ -3,6 +3,7 @@ import type { Session as AuthSession, User } from "@supabase/supabase-js";
 import { AppSidebar } from "./components/AppSidebar";
 import { AuthScreen, AuthShell } from "./components/Auth";
 import { FeedPage } from "./components/FeedPage";
+import { NotificationBell } from "./components/NotificationBell";
 import { PeoplePage } from "./components/PeoplePage";
 import { ProfilePage } from "./components/ProfilePage";
 import { TimerPage } from "./components/TimerPage";
@@ -13,17 +14,21 @@ import {
   deleteSession,
   fetchDiscoverProfiles,
   fetchFollowingFeed,
+  fetchNotifications,
   fetchProfile,
   fetchPublicSessionsForProfile,
   fetchUserSessions,
   fetchWcaPersonalBests,
   getUserDisplay,
+  createNotification,
   errorMessage,
+  markNotificationsRead,
   saveSession,
   setSessionKudos,
   setFollow,
   updateProfile,
   type AppComment,
+  type AppNotification,
   type AppProfile,
   type AppSession,
   type AppSolve,
@@ -31,9 +36,7 @@ import {
   type SocialProfile,
   type WcaPersonalBest,
 } from "./data/database";
-import { candidates, initialSolves, starterSessions } from "./data/mockData";
 import { isSupabaseConfigured, supabase } from "./services/supabase";
-import { formatSessionTimestamp } from "./utils/dateUtils";
 import {
   average,
   averageOf,
@@ -53,7 +56,6 @@ type FollowCandidate = SocialProfile;
 export function App() {
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [demoMode, setDemoMode] = useState(false);
 
   useEffect(() => {
     if (!supabase) {
@@ -90,22 +92,20 @@ export function App() {
     );
   }
 
-  if (!authSession && !demoMode) {
-    return <AuthScreen onDemo={() => setDemoMode(true)} />;
+  if (!authSession) {
+    return <AuthScreen />;
   }
 
-  if (!isSupabaseConfigured && !demoMode) {
-    return <AuthScreen onDemo={() => setDemoMode(true)} />;
+  if (!isSupabaseConfigured) {
+    return <AuthScreen />;
   }
 
   return (
     <CubeApp
-      user={authSession?.user ?? null}
+      user={authSession.user}
       onSignOut={() => {
-        setDemoMode(false);
         supabase?.auth.signOut();
       }}
-      demoMode={demoMode}
     />
   );
 }
@@ -113,22 +113,15 @@ export function App() {
 function CubeApp({
   user,
   onSignOut,
-  demoMode,
 }: {
-  user: User | null;
+  user: User;
   onSignOut: () => void;
-  demoMode: boolean;
 }) {
-  const [solves, setSolves] = useState<AppSolve[]>(
-    demoMode ? initialSolves : [],
-  );
-  const [userSessions, setUserSessions] = useState<AppSession[]>(
-    demoMode ? starterSessions : [],
-  );
-  const [feedSessions, setFeedSessions] = useState<AppSession[]>(
-    demoMode ? starterSessions : [],
-  );
-  const [following, setFollowing] = useState(candidates);
+  const [solves, setSolves] = useState<AppSolve[]>([]);
+  const [userSessions, setUserSessions] = useState<AppSession[]>([]);
+  const [feedSessions, setFeedSessions] = useState<AppSession[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [following, setFollowing] = useState<FollowCandidate[]>([]);
   const [manualTime, setManualTime] = useState("");
   const [manualPenalty, setManualPenalty] = useState<Penalty>("ok");
   const [puzzle, setPuzzle] = useState("3x3");
@@ -165,7 +158,7 @@ function CubeApp({
   const startRef = useRef(0);
   const inspectionStartRef = useRef(0);
   const { displayName, username, initials } = displayProfile;
-  const userId = user?.id ?? null;
+  const userId = user.id;
   const currentEvent = eventConfig(puzzle);
   const isManualOnlyEvent = currentEvent.manualOnly;
   const inspectionAvailable = currentEvent.inspection && !isManualOnlyEvent;
@@ -244,35 +237,24 @@ function CubeApp({
     async function loadPersistedData() {
       setDisplayProfile(getUserDisplay(user));
 
-      if (demoMode || !user) {
-        setSolves(initialSolves);
-        setUserSessions(starterSessions);
-        setFeedSessions(starterSessions);
-        setFollowing(candidates);
-        setSessionsLoading(false);
-        setPeopleLoading(false);
-        setProfileRecord(null);
-        setProfileForm({
-          displayName: getUserDisplay(null).displayName,
-          username: getUserDisplay(null).username,
-          bio: "Practicing consistency and building CubeVa.",
-          wcaId: "",
-        });
-        setProfileWcaPersonalBests([]);
-        return;
-      }
-
       setSessionsLoading(true);
       setPeopleLoading(true);
       setSessionMessage("");
 
       try {
-        const [profile, loadedSessions, loadedFeed, loadedPeople] =
+        const [
+          profile,
+          loadedSessions,
+          loadedFeed,
+          loadedPeople,
+          loadedNotifications,
+        ] =
           await Promise.all([
             fetchProfile(user.id),
             fetchUserSessions(user),
             fetchFollowingFeed(user.id),
             fetchDiscoverProfiles(user.id),
+            fetchNotifications(user.id),
           ]);
 
         if (cancelled) return;
@@ -308,6 +290,7 @@ function CubeApp({
         setUserSessions(loadedSessions);
         setFeedSessions(loadedFeed);
         setFollowing(loadedPeople);
+        setNotifications(loadedNotifications);
       } catch (error) {
         if (!cancelled) {
           setSessionMessage(
@@ -327,11 +310,11 @@ function CubeApp({
     return () => {
       cancelled = true;
     };
-  }, [demoMode, userId]);
+  }, [user, userId]);
 
   const selfProfile = useMemo<ProfileView>(
     () => ({
-      id: userId ?? "demo-user",
+      id: user.id,
       displayName,
       username,
       initials,
@@ -351,7 +334,7 @@ function CubeApp({
       profileRecord?.bio,
       profileRecord?.wca_id,
       profileWcaPersonalBests,
-      userId,
+      user,
       userSessions,
       username,
     ],
@@ -490,43 +473,21 @@ function CubeApp({
     setPublishing(true);
     setSessionMessage("");
 
-    if (user && !demoMode) {
-      try {
-        const savedSession = await saveSession({
-          user,
-          puzzle,
-          title: `${puzzle} practice session`,
-          solves,
-        });
-        setUserSessions((current) => [savedSession, ...current]);
-        setSolves([]);
-        setSessionMessage("Session saved to Supabase.");
-      } catch (error) {
-        setSessionMessage(errorMessage(error, "Could not save session."));
-      } finally {
-        setPublishing(false);
-      }
-      return;
+    try {
+      const savedSession = await saveSession({
+        user,
+        puzzle,
+        title: `${puzzle} practice session`,
+        solves,
+      });
+      setUserSessions((current) => [savedSession, ...current]);
+      setSolves([]);
+      setSessionMessage("Session saved.");
+    } catch (error) {
+      setSessionMessage(errorMessage(error, "Could not save session."));
+    } finally {
+      setPublishing(false);
     }
-
-    const createdAt = new Date().toISOString();
-    const session: AppSession = {
-      id: crypto.randomUUID(),
-      user: displayName,
-      avatar: initials,
-      puzzle,
-      title: `${puzzle} practice session`,
-      createdAt: formatSessionTimestamp(createdAt),
-      createdAtSort: createdAt,
-      liked: false,
-      kudosCount: 0,
-      comments: [],
-      solves,
-    };
-    setUserSessions((current) => [session, ...current]);
-    setSolves([]);
-    setSessionMessage("Demo session published locally.");
-    setPublishing(false);
   }
 
   async function deletePublishedSession(sessionId: string) {
@@ -537,13 +498,11 @@ function CubeApp({
 
     setProfileMessage("");
 
-    if (user && !demoMode) {
-      try {
-        await deleteSession(sessionId);
-      } catch (error) {
-        setProfileMessage(errorMessage(error, "Could not delete session."));
-        return;
-      }
+    try {
+      await deleteSession(sessionId);
+    } catch (error) {
+      setProfileMessage(errorMessage(error, "Could not delete session."));
+      return;
     }
 
     setUserSessions((current) =>
@@ -571,21 +530,6 @@ function CubeApp({
   async function saveProfileEdits(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setProfileMessage("");
-
-    if (demoMode || !user) {
-      const fakeProfile = {
-        ...displayProfile,
-        displayName: profileForm.displayName,
-        username: profileForm.username,
-        bio: profileForm.bio,
-        wcaId: profileForm.wcaId,
-      };
-      setDisplayProfile(fakeProfile);
-      setProfileWcaPersonalBests([]);
-      setProfileEditing(false);
-      setProfileMessage("Demo profile updated locally.");
-      return;
-    }
 
     setProfileSaving(true);
     try {
@@ -624,21 +568,19 @@ function CubeApp({
     let sessions = person.sessions;
     let wcaId = person.wcaId;
     let wcaPersonalBests: WcaPersonalBest[] = [];
-    if (user && !demoMode) {
-      try {
-        const profile = await fetchProfile(person.id);
-        if (profile) {
-          wcaId = profile.wca_id ?? "";
-          sessions = await fetchPublicSessionsForProfile(profile, user.id);
-          wcaPersonalBests = wcaId ? await fetchWcaPersonalBests(wcaId) : [];
-        }
-      } catch (error) {
-        setProfileMessage(
-          error instanceof Error
-            ? error.message
-            : "Could not load profile sessions.",
-        );
+    try {
+      const profile = await fetchProfile(person.id);
+      if (profile) {
+        wcaId = profile.wca_id ?? "";
+        sessions = await fetchPublicSessionsForProfile(profile, user.id);
+        wcaPersonalBests = wcaId ? await fetchWcaPersonalBests(wcaId) : [];
       }
+    } catch (error) {
+      setProfileMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not load profile sessions.",
+      );
     }
 
     setSelectedProfile({
@@ -667,21 +609,19 @@ function CubeApp({
     if (!selectedProfile) return;
     const nextFollowState = !selectedProfile.following;
 
-    if (user && !demoMode) {
-      try {
-        await setFollow({
-          followerId: user.id,
-          followingId: selectedProfile.id,
-          follow: nextFollowState,
-        });
-        const loadedFeed = await fetchFollowingFeed(user.id);
-        setFeedSessions(loadedFeed);
-      } catch (error) {
-        setProfileMessage(
-          error instanceof Error ? error.message : "Could not update follow.",
-        );
-        return;
-      }
+    try {
+      await setFollow({
+        followerId: user.id,
+        followingId: selectedProfile.id,
+        follow: nextFollowState,
+      });
+      const loadedFeed = await fetchFollowingFeed(user.id);
+      setFeedSessions(loadedFeed);
+    } catch (error) {
+      setProfileMessage(
+        error instanceof Error ? error.message : "Could not update follow.",
+      );
+      return;
     }
 
     setFollowing((current) =>
@@ -694,26 +634,32 @@ function CubeApp({
     setSelectedProfile((current) =>
       current ? { ...current, following: nextFollowState } : current,
     );
+
+    if (nextFollowState) {
+      await notifyUser({
+        message: `${displayName} followed you.`,
+        recipientId: selectedProfile.id,
+        type: "follow",
+      });
+    }
   }
 
   async function togglePersonFollow(person: FollowCandidate) {
     const nextFollowState = !person.following;
 
-    if (user && !demoMode) {
-      try {
-        await setFollow({
-          followerId: user.id,
-          followingId: person.id,
-          follow: nextFollowState,
-        });
-        const loadedFeed = await fetchFollowingFeed(user.id);
-        setFeedSessions(loadedFeed);
-      } catch (error) {
-        setSessionMessage(
-          error instanceof Error ? error.message : "Could not update follow.",
-        );
-        return;
-      }
+    try {
+      await setFollow({
+        followerId: user.id,
+        followingId: person.id,
+        follow: nextFollowState,
+      });
+      const loadedFeed = await fetchFollowingFeed(user.id);
+      setFeedSessions(loadedFeed);
+    } catch (error) {
+      setSessionMessage(
+        error instanceof Error ? error.message : "Could not update follow.",
+      );
+      return;
     }
 
     setFollowing((current) =>
@@ -726,6 +672,14 @@ function CubeApp({
         ? { ...current, following: nextFollowState }
         : current,
     );
+
+    if (nextFollowState) {
+      await notifyUser({
+        message: `${displayName} followed you.`,
+        recipientId: person.id,
+        type: "follow",
+      });
+    }
   }
 
   function updateSessionById(
@@ -764,14 +718,20 @@ function CubeApp({
       kudosCount: Math.max(0, current.kudosCount + (nextLiked ? 1 : -1)),
     }));
 
-    if (!user || demoMode) return;
-
     try {
       await setSessionKudos({
         sessionId: session.id,
         userId: user.id,
         liked: nextLiked,
       });
+      if (nextLiked) {
+        await notifyUser({
+          message: `${displayName} gave kudos to your ${session.puzzle} session.`,
+          recipientId: session.userId,
+          sessionId: session.id,
+          type: "kudos",
+        });
+      }
     } catch (error) {
       updateSessionById(session.id, (current) => ({
         ...current,
@@ -788,35 +748,28 @@ function CubeApp({
 
     let comment: AppComment;
 
-    if (user && !demoMode) {
-      try {
-        comment = await addSessionComment({
-          body: trimmedBody,
-          sessionId: session.id,
-          user,
-        });
-      } catch (error) {
-        setSessionMessage(errorMessage(error, "Could not add comment."));
-        return;
-      }
-    } else {
-      const createdAt = new Date().toISOString();
-      comment = {
-        id: crypto.randomUUID(),
-        sessionId: session.id,
-        userId: userId ?? "demo-user",
-        user: displayName,
-        avatar: initials,
+    try {
+      comment = await addSessionComment({
         body: trimmedBody,
-        createdAt: formatSessionTimestamp(createdAt),
-        createdAtSort: createdAt,
-      };
+        sessionId: session.id,
+        user,
+      });
+    } catch (error) {
+      setSessionMessage(errorMessage(error, "Could not add comment."));
+      return;
     }
 
     updateSessionById(session.id, (current) => ({
       ...current,
       comments: [...current.comments, comment],
     }));
+
+    await notifyUser({
+      message: `${displayName} commented on your ${session.puzzle} session.`,
+      recipientId: session.userId,
+      sessionId: session.id,
+      type: "comment",
+    });
   }
 
   async function deleteFeedComment(session: AppSession, comment: AppComment) {
@@ -824,8 +777,6 @@ function CubeApp({
       ...current,
       comments: current.comments.filter((item) => item.id !== comment.id),
     }));
-
-    if (!user || demoMode) return;
 
     try {
       await deleteSessionComment(comment.id);
@@ -841,11 +792,51 @@ function CubeApp({
     }
   }
 
+  async function notifyUser({
+    message,
+    recipientId,
+    sessionId = null,
+    type,
+  }: {
+    message: string;
+    recipientId: string;
+    sessionId?: string | null;
+    type: AppNotification["type"];
+  }) {
+    if (!userId || recipientId === userId) return;
+
+    try {
+      const notification = await createNotification({
+        actorId: user.id,
+        message,
+        recipientId,
+        sessionId,
+        type,
+      });
+      if (notification && recipientId === userId) {
+        setNotifications((current) => [notification, ...current]);
+      }
+    } catch (error) {
+      setSessionMessage(errorMessage(error, "Could not create notification."));
+    }
+  }
+
+  async function markAllNotificationsRead() {
+    setNotifications((current) =>
+      current.map((notification) => ({ ...notification, read: true })),
+    );
+
+    try {
+      await markNotificationsRead(user.id);
+    } catch (error) {
+      setSessionMessage(errorMessage(error, "Could not update notifications."));
+    }
+  }
+
   return (
     <main className="grid min-h-screen gap-[22px] p-[22px] [grid-template-columns:260px_minmax(360px,1fr)] max-[1120px]:[grid-template-columns:210px_minmax(0,1fr)] max-[760px]:flex max-[760px]:flex-col max-[760px]:p-3.5">
       <AppSidebar
         activeView={activeView}
-        demoMode={demoMode}
         onNavigate={setActiveView}
         onShowProfile={showSelfProfile}
         onSignOut={() => {
@@ -853,95 +844,103 @@ function CubeApp({
         }}
       />
 
-      <div className="min-w-0" hidden={activeView !== "timer"}>
-        <TimerPage
-          addManualSolve={addManualSolve}
-          currentScramble={currentScramble}
-          elapsed={elapsed}
-          importSolves={importSolves}
-          importText={importText}
-          inspectionAvailable={inspectionAvailable}
-          inspectionElapsed={inspectionElapsed}
-          inspectionEnabled={inspectionEnabled}
-          inspectionPenalty={inspectionPenalty}
-          isManualOnlyEvent={isManualOnlyEvent}
-          manualPenalty={manualPenalty}
-          manualTime={manualTime}
-          nextScramble={nextScramble}
-          onDeleteSolve={deleteSolve}
-          onImportTextChange={setImportText}
-          onInspectionEnabledChange={setInspectionEnabled}
-          onManualPenaltyChange={setManualPenalty}
-          onManualTimeChange={setManualTime}
-          onPuzzleChange={setPuzzle}
-          onSolvePenaltyChange={setSolvePenalty}
-          publishSession={publishSession}
-          publishing={publishing}
-          puzzle={puzzle}
-          scrambleLoading={scrambleLoading}
-          sessionMessage={sessionMessage}
-          solves={solves}
-          stats={stats}
-          timerState={timerState}
-          toggleTimer={toggleTimer}
+      <div className="grid min-w-0 content-start gap-4">
+        <NotificationBell
+          notifications={notifications}
+          onMarkAllRead={markAllNotificationsRead}
         />
+
+        {activeView === "timer" && (
+          <div className="min-w-0">
+            <TimerPage
+              addManualSolve={addManualSolve}
+              currentScramble={currentScramble}
+              elapsed={elapsed}
+              importSolves={importSolves}
+              importText={importText}
+              inspectionAvailable={inspectionAvailable}
+              inspectionElapsed={inspectionElapsed}
+              inspectionEnabled={inspectionEnabled}
+              inspectionPenalty={inspectionPenalty}
+              isManualOnlyEvent={isManualOnlyEvent}
+              manualPenalty={manualPenalty}
+              manualTime={manualTime}
+              nextScramble={nextScramble}
+              onDeleteSolve={deleteSolve}
+              onImportTextChange={setImportText}
+              onInspectionEnabledChange={setInspectionEnabled}
+              onManualPenaltyChange={setManualPenalty}
+              onManualTimeChange={setManualTime}
+              onPuzzleChange={setPuzzle}
+              onSolvePenaltyChange={setSolvePenalty}
+              publishSession={publishSession}
+              publishing={publishing}
+              puzzle={puzzle}
+              scrambleLoading={scrambleLoading}
+              sessionMessage={sessionMessage}
+              solves={solves}
+              stats={stats}
+              timerState={timerState}
+              toggleTimer={toggleTimer}
+            />
+          </div>
+        )}
+
+        <section
+          className="flex min-w-0 flex-col gap-4"
+          hidden={activeView !== "profile"}
+        >
+          <ProfilePage
+            profile={profileToShow}
+            stats={profileStats}
+            isEditing={profileEditing}
+            form={profileForm}
+            message={profileMessage}
+            saving={profileSaving}
+            onEdit={() => {
+              setProfileForm({
+                displayName,
+                username,
+                bio: selfProfile.bio,
+                wcaId: selfProfile.wcaId,
+              });
+              setProfileEditing(true);
+              setProfileMessage("");
+            }}
+            onCancel={() => setProfileEditing(false)}
+            onSave={saveProfileEdits}
+            onFormChange={setProfileForm}
+            onFollow={toggleSelectedFollow}
+            onDeleteSession={deletePublishedSession}
+          />
+        </section>
+
+        <section
+          className="flex min-w-0 flex-col gap-4"
+          hidden={activeView !== "feed"}
+        >
+          <FeedPage
+            sessions={chronologicalFeedSessions}
+            loading={sessionsLoading}
+            onAddComment={addFeedComment}
+            onDeleteComment={deleteFeedComment}
+            onToggleKudos={toggleSessionKudos}
+            userId={userId}
+          />
+        </section>
+
+        <section
+          className="flex min-w-0 flex-col gap-4"
+          hidden={activeView !== "people"}
+        >
+          <PeoplePage
+            people={following}
+            loading={peopleLoading}
+            onFollow={togglePersonFollow}
+            onViewProfile={openCandidateProfile}
+          />
+        </section>
       </div>
-
-      <section
-        className="flex min-w-0 flex-col gap-4"
-        hidden={activeView !== "profile"}
-      >
-        <ProfilePage
-          profile={profileToShow}
-          stats={profileStats}
-          isEditing={profileEditing}
-          form={profileForm}
-          message={profileMessage}
-          saving={profileSaving}
-          onEdit={() => {
-            setProfileForm({
-              displayName,
-              username,
-              bio: selfProfile.bio,
-              wcaId: selfProfile.wcaId,
-            });
-            setProfileEditing(true);
-            setProfileMessage("");
-          }}
-          onCancel={() => setProfileEditing(false)}
-          onSave={saveProfileEdits}
-          onFormChange={setProfileForm}
-          onFollow={toggleSelectedFollow}
-          onDeleteSession={deletePublishedSession}
-        />
-      </section>
-
-      <section
-        className="flex min-w-0 flex-col gap-4"
-        hidden={activeView !== "feed"}
-      >
-        <FeedPage
-          sessions={chronologicalFeedSessions}
-          loading={sessionsLoading}
-          onAddComment={addFeedComment}
-          onDeleteComment={deleteFeedComment}
-          onToggleKudos={toggleSessionKudos}
-          userId={userId}
-          demoMode={demoMode}
-        />
-      </section>
-
-      <section
-        className="flex min-w-0 flex-col gap-4"
-        hidden={activeView !== "people"}
-      >
-        <PeoplePage
-          people={following}
-          loading={peopleLoading}
-          onFollow={togglePersonFollow}
-          onViewProfile={openCandidateProfile}
-        />
-      </section>
     </main>
   );
 }
