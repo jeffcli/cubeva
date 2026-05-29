@@ -7,6 +7,7 @@ import type {
   AppSolve,
   NotificationType,
   Penalty,
+  ProfileSocialCounts,
   SocialProfile,
   WcaPersonalBest,
 } from "./domain";
@@ -18,6 +19,7 @@ export type {
   AppSolve,
   NotificationType,
   Penalty,
+  ProfileSocialCounts,
   SocialProfile,
   WcaPersonalBest,
 } from "./domain";
@@ -103,6 +105,11 @@ type WcaPersonalBestRow = {
   country_rank_average: number | null;
   continent_rank_average: number | null;
   updated_at: string;
+};
+
+const emptySocialCounts: ProfileSocialCounts = {
+  followers: 0,
+  following: 0,
 };
 
 export function getUserDisplay(user: User | null, profile?: AppProfile | null) {
@@ -210,7 +217,10 @@ export async function fetchDiscoverProfiles(userId: string): Promise<SocialProfi
     fetchProfilesExcept(userId),
   ]);
 
-  const sessionsByUser = await fetchPublicSessionsForUsers(profiles, userId);
+  const [sessionsByUser, socialCountsByUser] = await Promise.all([
+    fetchPublicSessionsForUsers(profiles, userId),
+    fetchSocialCounts(profiles.map((profile) => profile.id)),
+  ]);
 
   return profiles.map((profile) => {
     const display = getUserDisplay(null, profile);
@@ -223,11 +233,20 @@ export async function fetchDiscoverProfiles(userId: string): Promise<SocialProfi
       avatar: display.initials,
       average: sessions.length ? `avg ${averageLabel(sessions)}` : "no sessions",
       following: followingIds.has(profile.id),
+      followersCount: socialCountsByUser.get(profile.id)?.followers ?? 0,
+      followingCount: socialCountsByUser.get(profile.id)?.following ?? 0,
       bio: profile.bio ?? "",
       wcaId: profile.wca_id ?? "",
       sessions,
     };
   });
+}
+
+export async function fetchProfileSocialCounts(
+  profileId: string,
+): Promise<ProfileSocialCounts> {
+  const counts = await fetchSocialCounts([profileId]);
+  return counts.get(profileId) ?? emptySocialCounts;
 }
 
 export async function fetchFollowingFeed(userId: string): Promise<AppSession[]> {
@@ -359,6 +378,39 @@ async function fetchFollowingIds(userId: string) {
 
   if (error) throw error;
   return new Set(((data as { following_id: string }[] | null) ?? []).map((row) => row.following_id));
+}
+
+async function fetchSocialCounts(profileIds: string[]) {
+  const counts = new Map<string, ProfileSocialCounts>();
+  for (const profileId of profileIds) {
+    counts.set(profileId, { ...emptySocialCounts });
+  }
+
+  if (!supabase || !profileIds.length) return counts;
+
+  const { data, error } = await supabase
+    .from("follows")
+    .select("follower_id, following_id")
+    .or(
+      `follower_id.in.(${profileIds.join(",")}),following_id.in.(${profileIds.join(",")})`,
+    );
+
+  if (error) return counts;
+
+  for (const follow of
+    (data as { follower_id: string; following_id: string }[] | null) ?? []) {
+    const followerCounts = counts.get(follow.follower_id);
+    if (followerCounts) {
+      followerCounts.following += 1;
+    }
+
+    const followingCounts = counts.get(follow.following_id);
+    if (followingCounts) {
+      followingCounts.followers += 1;
+    }
+  }
+
+  return counts;
 }
 
 async function fetchProfilesExcept(userId: string): Promise<AppProfile[]> {

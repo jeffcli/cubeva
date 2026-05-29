@@ -114,9 +114,9 @@ create policy "Users can insert their own profile"
   on public.profiles for insert
   with check (auth.uid() = id);
 
-create policy "Users can read their own follows"
+create policy "Follows are visible to everyone"
   on public.follows for select
-  using (auth.uid() = follower_id or auth.uid() = following_id);
+  using (true);
 
 create policy "Users can manage their own follows"
   on public.follows for all
@@ -209,6 +209,117 @@ create policy "Users can mark their own notifications read"
   on public.notifications for update
   using (auth.uid() = recipient_id)
   with check (auth.uid() = recipient_id);
+
+create function public.notify_on_follow()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  actor_name text;
+begin
+  select coalesce(display_name, username, 'A cuber')
+    into actor_name
+  from public.profiles
+  where id = new.follower_id;
+
+  insert into public.notifications (recipient_id, actor_id, type, message)
+  values (
+    new.following_id,
+    new.follower_id,
+    'follow',
+    coalesce(actor_name, 'A cuber') || ' followed you.'
+  );
+
+  return new;
+end;
+$$;
+
+create trigger on_follow_created
+  after insert on public.follows
+  for each row execute procedure public.notify_on_follow();
+
+create function public.notify_on_kudos()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  actor_name text;
+  owner_id uuid;
+  session_puzzle text;
+begin
+  select user_id, puzzle
+    into owner_id, session_puzzle
+  from public.sessions
+  where id = new.session_id;
+
+  if owner_id is null or owner_id = new.user_id then
+    return new;
+  end if;
+
+  select coalesce(display_name, username, 'A cuber')
+    into actor_name
+  from public.profiles
+  where id = new.user_id;
+
+  insert into public.notifications (recipient_id, actor_id, type, session_id, message)
+  values (
+    owner_id,
+    new.user_id,
+    'kudos',
+    new.session_id,
+    coalesce(actor_name, 'A cuber') || ' gave kudos to your ' || session_puzzle || ' session.'
+  );
+
+  return new;
+end;
+$$;
+
+create trigger on_session_kudos_created
+  after insert on public.session_kudos
+  for each row execute procedure public.notify_on_kudos();
+
+create function public.notify_on_comment()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  actor_name text;
+  owner_id uuid;
+  session_puzzle text;
+begin
+  select user_id, puzzle
+    into owner_id, session_puzzle
+  from public.sessions
+  where id = new.session_id;
+
+  if owner_id is null or owner_id = new.user_id then
+    return new;
+  end if;
+
+  select coalesce(display_name, username, 'A cuber')
+    into actor_name
+  from public.profiles
+  where id = new.user_id;
+
+  insert into public.notifications (recipient_id, actor_id, type, session_id, message)
+  values (
+    owner_id,
+    new.user_id,
+    'comment',
+    new.session_id,
+    coalesce(actor_name, 'A cuber') || ' commented on your ' || session_puzzle || ' session.'
+  );
+
+  return new;
+end;
+$$;
+
+create trigger on_session_comment_created
+  after insert on public.session_comments
+  for each row execute procedure public.notify_on_comment();
 
 create function public.handle_new_user()
 returns trigger

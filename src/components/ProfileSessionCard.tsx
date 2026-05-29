@@ -5,10 +5,12 @@ import { average, bestTime } from "../utils/solveUtils";
 export function ProfileSessionCard({
   canDelete,
   onDeleteSession,
+  onViewSession,
   session,
 }: {
   canDelete: boolean;
   onDeleteSession: (sessionId: string) => void;
+  onViewSession: (session: AppSession) => void;
   session: AppSession;
 }) {
   return (
@@ -27,15 +29,24 @@ export function ProfileSessionCard({
         <span>best {bestTime(session.solves)}</span>
         <span>{session.solves.length} solves</span>
       </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          className="min-h-[38px] bg-panel px-3 text-ink"
+          type="button"
+          onClick={() => onViewSession(session)}
+        >
+          View details
+        </button>
       {canDelete && (
         <button
-          className="min-h-[38px] justify-self-start bg-[#fff2ed] px-3 text-[#b4331f] hover:bg-accent hover:text-white"
+          className="min-h-[38px] bg-[#fff2ed] px-3 text-[#b4331f] hover:bg-accent hover:text-white"
           type="button"
           onClick={() => onDeleteSession(session.id)}
         >
           <Trash2 size={16} /> Delete session
         </button>
       )}
+      </div>
     </article>
   );
 }

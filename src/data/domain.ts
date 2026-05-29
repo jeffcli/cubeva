@@ -59,6 +59,11 @@ export type AppProfile = {
   created_at: string;
 };
 
+export type ProfileSocialCounts = {
+  followers: number;
+  following: number;
+};
+
 export type WcaPersonalBest = {
   wcaId: string;
   eventId: string;
@@ -81,6 +86,8 @@ export type SocialProfile = {
   avatar: string;
   average: string;
   following: boolean;
+  followersCount: number;
+  followingCount: number;
   bio: string;
   wcaId: string;
   sessions: AppSession[];

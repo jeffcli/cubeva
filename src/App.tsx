@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Session as AuthSession, User } from "@supabase/supabase-js";
+import { ActivityDetailPage } from "./components/ActivityDetailPage";
 import { AppSidebar } from "./components/AppSidebar";
 import { AuthScreen, AuthShell } from "./components/Auth";
 import { FeedPage } from "./components/FeedPage";
@@ -16,11 +17,11 @@ import {
   fetchFollowingFeed,
   fetchNotifications,
   fetchProfile,
+  fetchProfileSocialCounts,
   fetchPublicSessionsForProfile,
   fetchUserSessions,
   fetchWcaPersonalBests,
   getUserDisplay,
-  createNotification,
   errorMessage,
   markNotificationsRead,
   saveSession,
@@ -33,6 +34,7 @@ import {
   type AppSession,
   type AppSolve,
   type Penalty,
+  type ProfileSocialCounts,
   type SocialProfile,
   type WcaPersonalBest,
 } from "./data/database";
@@ -142,7 +144,15 @@ function CubeApp({
   const [selectedProfile, setSelectedProfile] = useState<ProfileView | null>(
     null,
   );
+  const [selectedActivity, setSelectedActivity] = useState<AppSession | null>(
+    null,
+  );
   const [profileRecord, setProfileRecord] = useState<AppProfile | null>(null);
+  const [profileSocialCounts, setProfileSocialCounts] =
+    useState<ProfileSocialCounts>({
+      followers: 0,
+      following: 0,
+    });
   const [profileWcaPersonalBests, setProfileWcaPersonalBests] = useState<
     WcaPersonalBest[]
   >([]);
@@ -248,6 +258,7 @@ function CubeApp({
           loadedFeed,
           loadedPeople,
           loadedNotifications,
+          loadedSocialCounts,
         ] =
           await Promise.all([
             fetchProfile(user.id),
@@ -255,6 +266,7 @@ function CubeApp({
             fetchFollowingFeed(user.id),
             fetchDiscoverProfiles(user.id),
             fetchNotifications(user.id),
+            fetchProfileSocialCounts(user.id),
           ]);
 
         if (cancelled) return;
@@ -291,6 +303,7 @@ function CubeApp({
         setFeedSessions(loadedFeed);
         setFollowing(loadedPeople);
         setNotifications(loadedNotifications);
+        setProfileSocialCounts(loadedSocialCounts);
       } catch (error) {
         if (!cancelled) {
           setSessionMessage(
@@ -324,6 +337,7 @@ function CubeApp({
         "Practicing consistency and building CubeVa.",
       wcaId: profileRecord?.wca_id ?? displayProfile.wcaId ?? "",
       wcaPersonalBests: profileWcaPersonalBests,
+      socialCounts: profileSocialCounts,
       sessions: userSessions,
       isSelf: true,
     }),
@@ -334,6 +348,7 @@ function CubeApp({
       profileRecord?.bio,
       profileRecord?.wca_id,
       profileWcaPersonalBests,
+      profileSocialCounts,
       user,
       userSessions,
       username,
@@ -516,6 +531,10 @@ function CubeApp({
           }
         : current,
     );
+    setSelectedActivity((current) => (current?.id === sessionId ? null : current));
+    if (selectedActivity?.id === sessionId) {
+      setActiveView("profile");
+    }
     setProfileMessage("Session deleted.");
   }
 
@@ -568,12 +587,19 @@ function CubeApp({
     let sessions = person.sessions;
     let wcaId = person.wcaId;
     let wcaPersonalBests: WcaPersonalBest[] = [];
+    let socialCounts: ProfileSocialCounts = {
+      followers: person.followersCount,
+      following: person.followingCount,
+    };
     try {
       const profile = await fetchProfile(person.id);
       if (profile) {
         wcaId = profile.wca_id ?? "";
-        sessions = await fetchPublicSessionsForProfile(profile, user.id);
-        wcaPersonalBests = wcaId ? await fetchWcaPersonalBests(wcaId) : [];
+        [sessions, wcaPersonalBests, socialCounts] = await Promise.all([
+          fetchPublicSessionsForProfile(profile, user.id),
+          wcaId ? fetchWcaPersonalBests(wcaId) : Promise.resolve([]),
+          fetchProfileSocialCounts(profile.id),
+        ]);
       }
     } catch (error) {
       setProfileMessage(
@@ -592,6 +618,7 @@ function CubeApp({
       wcaId,
       wcaPersonalBests,
       following: person.following,
+      socialCounts,
       sessions,
       isSelf: false,
     });
@@ -603,6 +630,25 @@ function CubeApp({
     setSelectedProfile(null);
     setActiveView("profile");
     setProfileEditing(false);
+  }
+
+  function openActivityDetail(session: AppSession) {
+    setSelectedActivity(session);
+    setActiveView("activity");
+  }
+
+  function openActivityDetailById(sessionId: string) {
+    const session =
+      userSessions.find((item) => item.id === sessionId) ??
+      feedSessions.find((item) => item.id === sessionId) ??
+      following
+        .flatMap((person) => person.sessions)
+        .find((item) => item.id === sessionId) ??
+      selectedProfile?.sessions.find((item) => item.id === sessionId);
+
+    if (session) {
+      openActivityDetail(session);
+    }
   }
 
   async function toggleSelectedFollow() {
@@ -627,21 +673,34 @@ function CubeApp({
     setFollowing((current) =>
       current.map((person) =>
         person.id === selectedProfile.id
-          ? { ...person, following: nextFollowState }
+          ? {
+              ...person,
+              following: nextFollowState,
+              followersCount: Math.max(
+                0,
+                person.followersCount + (nextFollowState ? 1 : -1),
+              ),
+            }
           : person,
       ),
     );
     setSelectedProfile((current) =>
-      current ? { ...current, following: nextFollowState } : current,
+      current
+        ? {
+            ...current,
+            following: nextFollowState,
+            socialCounts: {
+              ...current.socialCounts,
+              followers: Math.max(
+                0,
+                current.socialCounts.followers + (nextFollowState ? 1 : -1),
+              ),
+            },
+          }
+        : current,
     );
 
-    if (nextFollowState) {
-      await notifyUser({
-        message: `${displayName} followed you.`,
-        recipientId: selectedProfile.id,
-        type: "follow",
-      });
-    }
+    await refreshNotifications();
   }
 
   async function togglePersonFollow(person: FollowCandidate) {
@@ -664,22 +723,35 @@ function CubeApp({
 
     setFollowing((current) =>
       current.map((item) =>
-        item.id === person.id ? { ...item, following: nextFollowState } : item,
+        item.id === person.id
+          ? {
+              ...item,
+              following: nextFollowState,
+              followersCount: Math.max(
+                0,
+                item.followersCount + (nextFollowState ? 1 : -1),
+              ),
+            }
+          : item,
       ),
     );
     setSelectedProfile((current) =>
       current && current.id === person.id
-        ? { ...current, following: nextFollowState }
+        ? {
+            ...current,
+            following: nextFollowState,
+            socialCounts: {
+              ...current.socialCounts,
+              followers: Math.max(
+                0,
+                current.socialCounts.followers + (nextFollowState ? 1 : -1),
+              ),
+            },
+          }
         : current,
     );
 
-    if (nextFollowState) {
-      await notifyUser({
-        message: `${displayName} followed you.`,
-        recipientId: person.id,
-        type: "follow",
-      });
-    }
+    await refreshNotifications();
   }
 
   function updateSessionById(
@@ -707,6 +779,9 @@ function CubeApp({
           }
         : current,
     );
+    setSelectedActivity((current) =>
+      current?.id === sessionId ? update(current) : current,
+    );
   }
 
   async function toggleSessionKudos(session: AppSession) {
@@ -724,14 +799,7 @@ function CubeApp({
         userId: user.id,
         liked: nextLiked,
       });
-      if (nextLiked) {
-        await notifyUser({
-          message: `${displayName} gave kudos to your ${session.puzzle} session.`,
-          recipientId: session.userId,
-          sessionId: session.id,
-          type: "kudos",
-        });
-      }
+      await refreshNotifications();
     } catch (error) {
       updateSessionById(session.id, (current) => ({
         ...current,
@@ -764,12 +832,7 @@ function CubeApp({
       comments: [...current.comments, comment],
     }));
 
-    await notifyUser({
-      message: `${displayName} commented on your ${session.puzzle} session.`,
-      recipientId: session.userId,
-      sessionId: session.id,
-      type: "comment",
-    });
+    await refreshNotifications();
   }
 
   async function deleteFeedComment(session: AppSession, comment: AppComment) {
@@ -792,35 +855,6 @@ function CubeApp({
     }
   }
 
-  async function notifyUser({
-    message,
-    recipientId,
-    sessionId = null,
-    type,
-  }: {
-    message: string;
-    recipientId: string;
-    sessionId?: string | null;
-    type: AppNotification["type"];
-  }) {
-    if (!userId || recipientId === userId) return;
-
-    try {
-      const notification = await createNotification({
-        actorId: user.id,
-        message,
-        recipientId,
-        sessionId,
-        type,
-      });
-      if (notification && recipientId === userId) {
-        setNotifications((current) => [notification, ...current]);
-      }
-    } catch (error) {
-      setSessionMessage(errorMessage(error, "Could not create notification."));
-    }
-  }
-
   async function markAllNotificationsRead() {
     setNotifications((current) =>
       current.map((notification) => ({ ...notification, read: true })),
@@ -830,6 +864,14 @@ function CubeApp({
       await markNotificationsRead(user.id);
     } catch (error) {
       setSessionMessage(errorMessage(error, "Could not update notifications."));
+    }
+  }
+
+  async function refreshNotifications() {
+    try {
+      setNotifications(await fetchNotifications(user.id));
+    } catch (error) {
+      setSessionMessage(errorMessage(error, "Could not refresh notifications."));
     }
   }
 
@@ -848,6 +890,7 @@ function CubeApp({
         <NotificationBell
           notifications={notifications}
           onMarkAllRead={markAllNotificationsRead}
+          onOpenSession={openActivityDetailById}
         />
 
         {activeView === "timer" && (
@@ -912,8 +955,20 @@ function CubeApp({
             onFormChange={setProfileForm}
             onFollow={toggleSelectedFollow}
             onDeleteSession={deletePublishedSession}
+            onViewSession={openActivityDetail}
           />
         </section>
+
+        {activeView === "activity" && selectedActivity && (
+          <ActivityDetailPage
+            onAddComment={addFeedComment}
+            onBack={() => setActiveView("feed")}
+            onDeleteComment={deleteFeedComment}
+            onToggleKudos={toggleSessionKudos}
+            session={selectedActivity}
+            userId={userId}
+          />
+        )}
 
         <section
           className="flex min-w-0 flex-col gap-4"
@@ -925,6 +980,7 @@ function CubeApp({
             onAddComment={addFeedComment}
             onDeleteComment={deleteFeedComment}
             onToggleKudos={toggleSessionKudos}
+            onViewSession={openActivityDetail}
             userId={userId}
           />
         </section>

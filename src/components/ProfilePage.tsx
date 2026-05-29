@@ -25,6 +25,7 @@ export function ProfilePage({
   onFormChange,
   onFollow,
   onDeleteSession,
+  onViewSession,
 }: {
   profile: ProfileView;
   stats: ReturnType<typeof getProfileStats>;
@@ -43,6 +44,7 @@ export function ProfilePage({
   }) => void;
   onFollow: () => void;
   onDeleteSession: (sessionId: string) => void;
+  onViewSession: (session: AppSession) => void;
 }) {
   const [activeTab, setActiveTab] = useState<ProfileTab>("wca");
   const [selectedEvent, setSelectedEvent] = useState("all");
@@ -109,6 +111,10 @@ export function ProfilePage({
           </div>
         </div>
         <p className="m-0">{profile.bio || "No bio yet."}</p>
+        <div className="grid grid-cols-2 gap-2.5 max-w-[340px] [&_span]:rounded-lg [&_span]:bg-panel [&_span]:p-3 [&_span]:font-black">
+          <span>{profile.socialCounts.followers} followers</span>
+          <span>{profile.socialCounts.following} following</span>
+        </div>
         <div className="flex items-center gap-3.5 max-[760px]:flex-col max-[760px]:items-stretch">
           {profile.isSelf ? (
             <button
@@ -283,12 +289,14 @@ export function ProfilePage({
             ) : selectedEvent === "all" ? (
               <SelectedDaySessions
                 eventLabel="all events"
+                onViewSession={onViewSession}
                 sessions={selectedDaySessions}
                 selectedDayLabel={selectedWeeklyDay?.label ?? ""}
               />
             ) : selectedEventStats ? (
               <SelectedDaySessions
                 eventLabel={selectedEvent}
+                onViewSession={onViewSession}
                 sessions={selectedDaySessions}
                 selectedDayLabel={selectedWeeklyDay?.label ?? ""}
               />
@@ -317,6 +325,7 @@ export function ProfilePage({
               <ProfileSessionCard
                 canDelete={profile.isSelf}
                 onDeleteSession={onDeleteSession}
+                onViewSession={onViewSession}
                 session={session}
                 key={session.id}
               />
@@ -338,10 +347,12 @@ const profileTabs: { id: ProfileTab; label: string }[] = [
 
 function SelectedDaySessions({
   eventLabel,
+  onViewSession,
   selectedDayLabel,
   sessions,
 }: {
   eventLabel: string;
+  onViewSession: (session: AppSession) => void;
   selectedDayLabel: string;
   sessions: AppSession[];
 }) {
@@ -366,6 +377,7 @@ function SelectedDaySessions({
           <ProfileSessionCard
             canDelete={false}
             onDeleteSession={() => undefined}
+            onViewSession={onViewSession}
             session={session}
             key={session.id}
           />

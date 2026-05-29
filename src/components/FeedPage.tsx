@@ -7,6 +7,7 @@ export function FeedPage({
   onAddComment,
   onDeleteComment,
   onToggleKudos,
+  onViewSession,
   sessions,
   loading,
   userId,
@@ -14,6 +15,7 @@ export function FeedPage({
   onAddComment: (session: AppSession, body: string) => void;
   onDeleteComment: (session: AppSession, comment: AppComment) => void;
   onToggleKudos: (session: AppSession) => void;
+  onViewSession: (session: AppSession) => void;
   sessions: AppSession[];
   loading: boolean;
   userId: string | null;
@@ -40,6 +42,7 @@ export function FeedPage({
             onAddComment={onAddComment}
             onDeleteComment={onDeleteComment}
             onToggleKudos={onToggleKudos}
+            onViewSession={onViewSession}
             session={session}
             userId={userId}
             key={session.id}
@@ -54,12 +57,14 @@ function FeedCard({
   onAddComment,
   onDeleteComment,
   onToggleKudos,
+  onViewSession,
   session,
   userId,
 }: {
   onAddComment: (session: AppSession, body: string) => void;
   onDeleteComment: (session: AppSession, comment: AppComment) => void;
   onToggleKudos: (session: AppSession) => void;
+  onViewSession: (session: AppSession) => void;
   session: AppSession;
   userId: string | null;
 }) {
@@ -140,6 +145,13 @@ function FeedCard({
           onClick={() => setCommentsOpen(true)}
         >
           <MessageCircle size={17} /> {session.comments.length} Comments
+        </button>
+        <button
+          className="min-h-10 bg-panel px-3.5 text-ink"
+          type="button"
+          onClick={() => onViewSession(session)}
+        >
+          View details
         </button>
       </footer>
       {commentsOpen && (

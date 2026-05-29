@@ -1,6 +1,10 @@
-import type { AppSession, WcaPersonalBest } from "../data/database";
+import type {
+  AppSession,
+  ProfileSocialCounts,
+  WcaPersonalBest,
+} from "../data/database";
 
-export type AppView = "feed" | "people" | "profile" | "timer";
+export type AppView = "activity" | "feed" | "people" | "profile" | "timer";
 export type TimerState = "ready" | "inspection" | "running";
 
 export type ProfileView = {
@@ -12,6 +16,7 @@ export type ProfileView = {
   wcaId: string;
   wcaPersonalBests: WcaPersonalBest[];
   following?: boolean;
+  socialCounts: ProfileSocialCounts;
   sessions: AppSession[];
   isSelf: boolean;
 };

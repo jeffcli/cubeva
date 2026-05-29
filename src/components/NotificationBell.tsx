@@ -4,9 +4,11 @@ import type { AppNotification } from "../data/database";
 
 export function NotificationBell({
   notifications,
+  onOpenSession,
   onMarkAllRead,
 }: {
   notifications: AppNotification[];
+  onOpenSession?: (sessionId: string) => void;
   onMarkAllRead: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -96,6 +98,18 @@ export function NotificationBell({
                       {notification.createdAt}
                     </small>
                   </div>
+                  {notification.sessionId && onOpenSession && (
+                    <button
+                      className="min-h-8 bg-card px-2 text-[0.75rem] text-ink"
+                      type="button"
+                      onClick={() => {
+                        onOpenSession(notification.sessionId as string);
+                        setOpen(false);
+                      }}
+                    >
+                      Open
+                    </button>
+                  )}
                 </article>
               ))}
             </div>
