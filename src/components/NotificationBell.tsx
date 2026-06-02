@@ -1,6 +1,12 @@
 import { Bell, CheckCheck, Heart, MessageCircle, UserPlus } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { AppNotification } from "../data/database";
+import { Button } from "./ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 export function NotificationBell({
   notifications,
@@ -12,45 +18,31 @@ export function NotificationBell({
   onMarkAllRead: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
   const unreadNotifications = notifications.filter(
     (notification) => !notification.read,
   );
   const visibleNotifications = unreadNotifications.slice(0, 6);
 
-  useEffect(() => {
-    function closeOnOutsideClick(event: MouseEvent) {
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", closeOnOutsideClick);
-    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
-  }, []);
-
   return (
-    <div className="relative z-30 flex justify-end" ref={wrapperRef}>
-      <button
-        aria-expanded={open}
-        aria-label="Notifications"
-        className="relative h-11 w-11 justify-center rounded-lg border border-line bg-card p-0 text-ink shadow-[0_10px_25px_rgba(29,35,32,0.08)] hover:bg-panel"
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-      >
-        <Bell size={19} />
-        {unreadNotifications.length > 0 && (
-          <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[0.68rem] font-black leading-none text-white">
-            {unreadNotifications.length}
-          </span>
-        )}
-      </button>
+    <div className="relative z-30 flex justify-end">
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            aria-label="Notifications"
+            className="relative h-11 w-11 border-line bg-card p-0 text-ink shadow-sm hover:bg-panel"
+            type="button"
+            variant="outline"
+          >
+            <Bell size={19} />
+            {unreadNotifications.length > 0 && (
+              <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[0.68rem] font-black leading-none text-white">
+                {unreadNotifications.length}
+              </span>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
 
-      {open && (
-        <section className="absolute right-0 top-13 w-[min(380px,calc(100vw-28px))] rounded-lg border border-line bg-card p-3 shadow-[0_22px_60px_rgba(29,35,32,0.18)]">
+        <DropdownMenuContent align="end">
           <header className="mb-2 flex items-center justify-between gap-3">
             <div>
               <p className="m-0 text-[0.68rem] font-black uppercase text-soft-muted">
@@ -60,14 +52,15 @@ export function NotificationBell({
                 Unread updates
               </h2>
             </div>
-            <button
-              className="min-h-9 px-2.5 text-[0.78rem]"
+            <Button
+              className="text-[0.78rem]"
+              size="sm"
               type="button"
               onClick={onMarkAllRead}
               disabled={unreadNotifications.length === 0}
             >
               <CheckCheck size={15} /> Read
-            </button>
+            </Button>
           </header>
 
           {visibleNotifications.length === 0 ? (
@@ -99,23 +92,25 @@ export function NotificationBell({
                     </small>
                   </div>
                   {notification.sessionId && onOpenSession && (
-                    <button
-                      className="min-h-8 bg-card px-2 text-[0.75rem] text-ink"
+                    <Button
+                      className="h-8 px-2 text-[0.75rem]"
+                      size="sm"
                       type="button"
                       onClick={() => {
                         onOpenSession(notification.sessionId as string);
                         setOpen(false);
                       }}
+                      variant="outline"
                     >
                       Open
-                    </button>
+                    </Button>
                   )}
                 </article>
               ))}
             </div>
           )}
-        </section>
-      )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

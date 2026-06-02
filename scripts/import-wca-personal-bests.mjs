@@ -3,7 +3,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const WCA_PERSON_API_BASE =
-  "https://raw.githubusercontent.com/robiningelbrecht/wca-rest-api/master/api/persons";
+  process.env.WCA_REST_API_BASE ??
+  "https://raw.githubusercontent.com/robiningelbrecht/wca-rest-api/refs/heads/v1/persons";
 const WCA_PERSON_PAGE_BASE = "https://www.worldcubeassociation.org/persons";
 
 const EVENT_NAMES = {

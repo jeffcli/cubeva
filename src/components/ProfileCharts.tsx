@@ -36,11 +36,11 @@ export function WeeklyProgressChart({
     points.find((point) => point.day.key === selectedDay?.key) ?? points.at(-1);
 
   return (
-    <article className="grid min-w-0 gap-3.5 rounded-lg border border-line bg-[#fffaf1] p-4">
+    <article className="grid min-w-0 gap-3.5 rounded-lg border border-line bg-card p-4 shadow-sm">
       <div>
         <h4 className="m-0 text-[1.3rem]">This week</h4>
       </div>
-      <div className="grid grid-cols-3 gap-2.5 max-[760px]:grid-cols-1 [&_div]:grid [&_div]:gap-1 [&_div]:border-r [&_div]:border-[#d8d1c5] max-[760px]:[&_div]:border-r-0 max-[760px]:[&_div]:border-b max-[760px]:[&_div]:pb-2.5 [&_div:last-child]:border-0 max-[760px]:[&_div:last-child]:pb-0 [&_span]:text-[0.84rem] [&_span]:font-extrabold [&_span]:text-muted [&_strong]:text-[clamp(1.4rem,3.4vw,2.25rem)] [&_strong]:font-extrabold [&_strong]:leading-none">
+      <div className="grid grid-cols-3 gap-2.5 max-[760px]:grid-cols-1 [&_div]:grid [&_div]:gap-1 [&_div]:border-r [&_div]:border-line max-[760px]:[&_div]:border-r-0 max-[760px]:[&_div]:border-b max-[760px]:[&_div]:pb-2.5 [&_div:last-child]:border-0 max-[760px]:[&_div:last-child]:pb-0 [&_span]:text-[0.84rem] [&_span]:font-medium [&_span]:text-muted [&_strong]:text-[clamp(1.4rem,3.4vw,2.25rem)] [&_strong]:font-semibold [&_strong]:leading-none">
         <div>
           <span>Solves</span>
           <strong>{selectedDay?.value ?? 0}</strong>
@@ -72,7 +72,7 @@ export function WeeklyProgressChart({
             return (
               <g key={ratio}>
                 <line
-                  className="stroke-[#ddd8d0] stroke-[1]"
+                  className="stroke-line stroke-[1]"
                   x1={padding.left}
                   x2={padding.left + plotWidth}
                   y1={y}
@@ -93,7 +93,7 @@ export function WeeklyProgressChart({
             return (
               <g key={day.label}>
                 <line
-                  className="stroke-[#ddd8d0] stroke-[1] opacity-[0.72]"
+                  className="stroke-line stroke-[1] opacity-[0.72]"
                   x1={x}
                   x2={x}
                   y1={padding.top}
@@ -133,7 +133,7 @@ export function WeeklyProgressChart({
                 className={
                   point.day.key === selectedPoint?.day.key
                     ? "fill-orange stroke-orange stroke-[5]"
-                    : "fill-[#fffaf1] stroke-orange stroke-[5]"
+                    : "fill-card stroke-orange stroke-[5]"
                 }
                 cx={point.x}
                 cy={point.y}

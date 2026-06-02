@@ -1,7 +1,16 @@
-import { ArrowLeft, Heart, MessageCircle, Timer, Trash2, Trophy } from "lucide-react";
+import {
+  ArrowLeft,
+  Heart,
+  MessageCircle,
+  Timer,
+  Trash2,
+  Trophy,
+} from "lucide-react";
 import { useState } from "react";
 import type { AppComment, AppSession } from "../data/database";
 import { average, bestTime, formatSolveResult } from "../utils/solveUtils";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 
 export function ActivityDetailPage({
   onAddComment,
@@ -31,15 +40,16 @@ export function ActivityDetailPage({
 
   return (
     <section className="grid gap-4">
-      <button
-        className="min-h-10 justify-self-start bg-panel px-3 text-ink"
+      <Button
+        className="justify-self-start"
+        variant="secondary"
         type="button"
         onClick={onBack}
       >
         <ArrowLeft size={17} /> Back
-      </button>
+      </Button>
 
-      <article className="grid gap-4 rounded-lg border border-line bg-card p-[22px] shadow-[0_18px_45px_rgba(29,35,32,0.08)]">
+      <article className="grid gap-4 rounded-lg border border-line bg-card p-[22px] shadow-sm">
         <header className="flex items-start justify-between gap-4 max-[760px]:flex-col">
           <div className="flex items-center gap-3">
             <div className="flex h-[52px] w-[52px] flex-none items-center justify-center rounded-lg bg-teal font-black text-white">
@@ -81,18 +91,18 @@ export function ActivityDetailPage({
           <span>{session.solves.length} solves</span>
         </div>
 
-        <button
-          className={`min-h-10 justify-self-start px-3.5 text-white ${
-            session.liked ? "bg-accent" : "bg-ink"
+        <Button
+          className={`justify-self-start ${
+            session.liked ? "bg-accent hover:bg-orange" : ""
           }`}
           type="button"
           onClick={() => onToggleKudos(session)}
         >
           <Heart size={17} /> {session.kudosCount} Kudos
-        </button>
+        </Button>
       </article>
 
-      <section className="grid gap-3 rounded-lg border border-line bg-card p-[18px] shadow-[0_18px_45px_rgba(29,35,32,0.08)]">
+      <section className="grid gap-3 rounded-lg border border-line bg-card p-[18px] shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <h3 className="m-0">Solves</h3>
           <span className="text-[0.85rem] font-extrabold text-soft-muted">
@@ -114,7 +124,7 @@ export function ActivityDetailPage({
         ))}
       </section>
 
-      <section className="grid gap-3 rounded-lg border border-line bg-card p-[18px] shadow-[0_18px_45px_rgba(29,35,32,0.08)]">
+      <section className="grid gap-3 rounded-lg border border-line bg-card p-[18px] shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <h3 className="m-0">Comments</h3>
           <span className="text-[0.85rem] font-extrabold text-soft-muted">
@@ -128,7 +138,10 @@ export function ActivityDetailPage({
         ) : (
           <div className="grid gap-2">
             {session.comments.map((comment) => (
-              <article className="grid gap-1 rounded-lg bg-panel p-3" key={comment.id}>
+              <article
+                className="grid gap-1 rounded-lg bg-panel p-3"
+                key={comment.id}
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal text-[0.78rem] font-black text-white">
@@ -144,14 +157,16 @@ export function ActivityDetailPage({
                     </div>
                   </div>
                   {comment.userId === userId && (
-                    <button
+                    <Button
                       aria-label={`Delete comment by ${comment.user}`}
-                      className="h-8 w-8 bg-[#fff2ed] p-0 text-[#b4331f] hover:bg-accent hover:text-white"
+                      className="h-8 w-8"
+                      size="icon"
                       type="button"
                       onClick={() => onDeleteComment(session, comment)}
+                      variant="destructive"
                     >
                       <Trash2 size={15} />
-                    </button>
+                    </Button>
                   )}
                 </div>
                 <p className="m-0 text-[#34413d]">{comment.body}</p>
@@ -163,18 +178,18 @@ export function ActivityDetailPage({
           className="grid gap-2 [grid-template-columns:minmax(0,1fr)_auto] max-[760px]:grid-cols-1"
           onSubmit={submitComment}
         >
-          <input
+          <Input
             value={commentText}
             onChange={(event) => setCommentText(event.target.value)}
             placeholder="Add a comment"
           />
-          <button
-            className="min-h-11 bg-ink px-3.5 text-white"
+          <Button
+            size="lg"
             type="submit"
             disabled={!commentText.trim()}
           >
             Post
-          </button>
+          </Button>
         </form>
       </section>
     </section>

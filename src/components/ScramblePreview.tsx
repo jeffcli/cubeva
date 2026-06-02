@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { puzzleIdForEvent, wcaEvents } from "../cubing/scrambles";
+import { Select } from "./ui/select";
 
 export function ScramblePreview({
   eventLabel,
@@ -72,7 +73,7 @@ export function ScramblePreview({
   return (
     <section className="grid h-full grid-rows-[auto_minmax(0,1fr)] gap-3 rounded-lg border border-panel-border bg-panel p-3.5">
       <div className="flex items-center justify-between gap-3">
-        <select
+        <Select
           className="min-h-10 w-full max-w-[220px] bg-card"
           aria-label="Timer event"
           value={eventLabel}
@@ -83,7 +84,7 @@ export function ScramblePreview({
               {event.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <div className="relative grid min-h-[320px] place-items-center overflow-hidden rounded-lg bg-card max-[760px]:min-h-[280px]">
         <div className="absolute inset-0" ref={previewRef} />

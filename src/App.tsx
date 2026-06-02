@@ -82,7 +82,7 @@ export function App() {
   if (authLoading) {
     return (
       <AuthShell>
-        <div className="grid w-[min(100%,480px)] max-w-[480px] gap-4 rounded-lg border border-line bg-card p-6 shadow-[0_22px_60px_rgba(29,35,32,0.12)]">
+        <div className="grid w-[min(100%,480px)] max-w-[480px] gap-4 rounded-lg border border-line bg-card p-6 shadow-md">
           <p className="m-0 text-[0.72rem] font-black uppercase text-soft-muted">
             Loading
           </p>

@@ -1,5 +1,6 @@
 import { Search, UserPlus } from "lucide-react";
 import type { SocialProfile } from "../data/database";
+import { Button } from "./ui/button";
 
 export function PeoplePage({
   people,
@@ -14,7 +15,7 @@ export function PeoplePage({
 }) {
   return (
     <section
-      className="grid gap-3 rounded-lg border border-line bg-card p-4 shadow-[0_18px_45px_rgba(29,35,32,0.08)]"
+      className="grid gap-3 rounded-lg border border-line bg-card p-4 shadow-sm"
       id="people"
     >
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -46,23 +47,22 @@ export function PeoplePage({
               {person.handle} · {person.average}
             </small>
           </div>
-          <button
+          <Button
             aria-label={`Follow ${person.name}`}
-            className={`h-[38px] w-[38px] p-0 text-white ${
-              person.following ? "bg-green" : "bg-ink"
-            }`}
+            className={person.following ? "bg-green hover:bg-teal" : ""}
+            size="icon"
             onClick={() => onFollow(person)}
             type="button"
           >
             <UserPlus size={16} />
-          </button>
-          <button
-            className="h-[38px] w-auto bg-panel px-3 text-ink"
+          </Button>
+          <Button
+            variant="secondary"
             type="button"
             onClick={() => onViewProfile(person)}
           >
             View
-          </button>
+          </Button>
         </div>
       ))}
     </section>

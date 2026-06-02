@@ -1,5 +1,6 @@
 import { Activity, LogOut, Timer, Trophy, Users } from "lucide-react";
 import type { AppView } from "../types/app";
+import { Button } from "./ui/button";
 
 export function AppSidebar({
   activeView,
@@ -23,13 +24,12 @@ export function AppSidebar({
           <p className="m-0 text-soft-muted">Training feed for speedcubers</p>
         </div>
       </div>
-      <button
-        className="min-h-[42px] bg-ink px-3 text-white"
+      <Button
         type="button"
         onClick={onSignOut}
       >
         <LogOut size={17} /> Sign out
-      </button>
+      </Button>
 
       <nav className="grid gap-2" aria-label="Primary">
         <SidebarButton
@@ -73,16 +73,16 @@ function SidebarButton({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
       className={`w-full justify-start gap-2.5 p-3 ${
         active
-          ? "bg-ink text-white"
+          ? ""
           : "bg-transparent text-[#34413d] hover:bg-ink hover:text-white"
       }`}
       type="button"
       onClick={onClick}
     >
       {icon} {label}
-    </button>
+    </Button>
   );
 }

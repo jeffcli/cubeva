@@ -11,6 +11,11 @@ import { getProfileStats } from "../utils/solveUtils";
 import { WeeklyProgressChart } from "./ProfileCharts";
 import { ProfileSessionCard } from "./ProfileSessionCard";
 import { WcaPersonalBestCard } from "./WcaPersonalBestCard";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Select } from "./ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Textarea } from "./ui/textarea";
 
 export function ProfilePage({
   profile,
@@ -90,7 +95,7 @@ export function ProfilePage({
 
   return (
     <>
-      <section className="grid gap-4 rounded-lg border border-line bg-card p-[22px] shadow-[0_18px_45px_rgba(29,35,32,0.08)]">
+      <section className="grid gap-4 rounded-lg border border-line bg-card p-[22px] shadow-sm">
         <div className="flex items-center gap-3.5 max-[760px]:flex-col max-[760px]:items-stretch">
           <div className="flex h-[78px] w-[78px] flex-none items-center justify-center rounded-lg bg-teal text-[1.75rem] font-black text-white">
             {profile.initials}
@@ -117,34 +122,34 @@ export function ProfilePage({
         </div>
         <div className="flex items-center gap-3.5 max-[760px]:flex-col max-[760px]:items-stretch">
           {profile.isSelf ? (
-            <button
-              className="min-h-11 bg-ink px-3.5 text-white"
+            <Button
+              size="lg"
               type="button"
               onClick={onEdit}
             >
               <Edit3 size={18} /> Edit Profile
-            </button>
+            </Button>
           ) : (
-            <button
-              className="min-h-11 bg-ink px-3.5 text-white"
+            <Button
+              size="lg"
               type="button"
               onClick={onFollow}
             >
               <UserPlus size={18} />{" "}
               {profile.following ? "Following" : "Follow"}
-            </button>
+            </Button>
           )}
         </div>
       </section>
 
       {profile.isSelf && isEditing && (
         <form
-          className="grid gap-3 rounded-lg border border-line bg-card p-[18px] shadow-[0_18px_45px_rgba(29,35,32,0.08)] [&_label]:grid [&_label]:gap-1.5 [&_label]:text-[0.82rem] [&_label]:font-extrabold [&_label]:text-muted"
+          className="grid gap-3 rounded-lg border border-line bg-card p-[18px] shadow-sm [&_label]:grid [&_label]:gap-1.5 [&_label]:text-[0.82rem] [&_label]:font-medium [&_label]:text-muted"
           onSubmit={onSave}
         >
           <label>
             Display name
-            <input
+            <Input
               value={form.displayName}
               onChange={(event) =>
                 onFormChange({ ...form, displayName: event.target.value })
@@ -154,7 +159,7 @@ export function ProfilePage({
           </label>
           <label>
             Username
-            <input
+            <Input
               value={form.username}
               onChange={(event) =>
                 onFormChange({ ...form, username: event.target.value })
@@ -164,7 +169,7 @@ export function ProfilePage({
           </label>
           <label>
             Bio
-            <textarea
+            <Textarea
               value={form.bio}
               onChange={(event) =>
                 onFormChange({ ...form, bio: event.target.value })
@@ -174,7 +179,7 @@ export function ProfilePage({
           </label>
           <label>
             WCA ID
-            <input
+            <Input
               value={form.wcaId}
               onChange={(event) =>
                 onFormChange({ ...form, wcaId: event.target.value })
@@ -183,20 +188,21 @@ export function ProfilePage({
             />
           </label>
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              className="min-h-11 bg-ink px-3.5 text-white"
+            <Button
+              size="lg"
               type="submit"
               disabled={saving}
             >
               {saving ? "Saving..." : "Save Profile"}
-            </button>
-            <button
-              className="min-h-11 bg-panel px-3.5 text-ink"
+            </Button>
+            <Button
+              size="lg"
+              variant="secondary"
               type="button"
               onClick={onCancel}
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       )}
@@ -207,32 +213,23 @@ export function ProfilePage({
         </p>
       )}
 
-      <section className="grid gap-3 rounded-lg border border-line bg-card p-[18px] shadow-[0_18px_45px_rgba(29,35,32,0.08)]">
-        <div
-          className="grid grid-cols-3 gap-1 rounded-lg border border-panel-border bg-panel p-1 max-[760px]:grid-cols-1"
-          role="tablist"
+      <Tabs
+        className="grid gap-3 rounded-lg border border-line bg-card p-[18px] shadow-sm"
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as ProfileTab)}
+      >
+        <TabsList
           aria-label="Profile details"
+          className="grid-cols-3 max-[760px]:grid-cols-1"
         >
           {profileTabs.map((tab) => (
-            <button
-              aria-selected={activeTab === tab.id}
-              className={`min-h-10 justify-center px-2.5 ${
-                activeTab === tab.id
-                  ? "bg-ink text-white"
-                  : "bg-transparent text-muted hover:bg-ink hover:text-white"
-              }`}
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              role="tab"
-              type="button"
-            >
+            <TabsTrigger value={tab.id} key={tab.id}>
               {tab.label}
-            </button>
+            </TabsTrigger>
           ))}
-        </div>
+        </TabsList>
 
-        {activeTab === "wca" && (
-          <div className="grid gap-3" role="tabpanel">
+        <TabsContent className="grid gap-3" value="wca">
             {!profile.wcaId ? (
               <p className="m-0 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
                 Add a WCA ID to this profile to show official personal bests.
@@ -252,11 +249,9 @@ export function ProfilePage({
                 ))}
               </div>
             )}
-          </div>
-        )}
+        </TabsContent>
 
-        {activeTab === "events" && (
-          <div className="grid gap-3" role="tabpanel">
+        <TabsContent className="grid gap-3" value="events">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h3>Stats by event</h3>
               <span className="text-[0.85rem] font-extrabold text-soft-muted">
@@ -265,7 +260,7 @@ export function ProfilePage({
             </div>
             <label className="grid max-w-80 gap-1.5 text-[0.78rem] font-extrabold text-muted">
               Event
-              <select
+              <Select
                 value={selectedEvent}
                 onChange={(event) => setSelectedEvent(event.target.value)}
               >
@@ -275,7 +270,7 @@ export function ProfilePage({
                     {event.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <WeeklyProgressChart
               onSelectDay={setSelectedDayKey}
@@ -305,11 +300,9 @@ export function ProfilePage({
                 No public sessions logged for {selectedEvent} yet.
               </p>
             )}
-          </div>
-        )}
+        </TabsContent>
 
-        {activeTab === "sessions" && (
-          <div className="grid gap-3" role="tabpanel">
+        <TabsContent className="grid gap-3" value="sessions">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h3>Recent sessions</h3>
               <span className="text-[0.85rem] font-extrabold text-soft-muted">
@@ -330,9 +323,8 @@ export function ProfilePage({
                 key={session.id}
               />
             ))}
-          </div>
-        )}
-      </section>
+        </TabsContent>
+      </Tabs>
     </>
   );
 }

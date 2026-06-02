@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { isSupabaseConfigured, supabase } from "../services/supabase";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 
 export function AuthScreen() {
   const [mode, setMode] = useState<"signin" | "signup">("signup");
@@ -53,7 +55,7 @@ export function AuthScreen() {
   if (!isSupabaseConfigured) {
     return (
       <AuthShell>
-        <section className="grid w-[min(100%,480px)] max-w-[480px] gap-4 rounded-lg border border-line bg-card p-6 shadow-[0_22px_60px_rgba(29,35,32,0.12)] [&>h1]:m-0 [&>p]:m-0">
+        <section className="grid w-[min(100%,480px)] max-w-[480px] gap-4 rounded-lg border border-line bg-card p-6 shadow-md [&>h1]:m-0 [&>p]:m-0">
           <p className="m-0 text-[0.72rem] font-black uppercase text-soft-muted">
             Auth setup
           </p>
@@ -76,7 +78,7 @@ export function AuthScreen() {
 
   return (
     <AuthShell>
-      <section className="grid w-[min(100%,480px)] max-w-[480px] gap-4 rounded-lg border border-line bg-card p-6 shadow-[0_22px_60px_rgba(29,35,32,0.12)] [&>h1]:m-0 [&>p]:m-0">
+      <section className="grid w-[min(100%,480px)] max-w-[480px] gap-4 rounded-lg border border-line bg-card p-6 shadow-md [&>h1]:m-0 [&>p]:m-0">
         <p className="text-[0.72rem] font-black uppercase text-soft-muted">
           Welcome to CubeVa
         </p>
@@ -86,14 +88,14 @@ export function AuthScreen() {
             : "Sign in to your cubing log."}
         </h1>
         <form
-          className="grid gap-3 [&_label]:grid [&_label]:gap-1.5 [&_label]:text-[0.82rem] [&_label]:font-extrabold [&_label]:text-muted"
+          className="grid gap-3 [&_label]:grid [&_label]:gap-1.5 [&_label]:text-[0.82rem] [&_label]:font-medium [&_label]:text-muted"
           onSubmit={submitAuth}
         >
           {mode === "signup" && (
             <>
               <label>
                 Display name
-                <input
+                <Input
                   value={displayName}
                   onChange={(event) => setDisplayName(event.target.value)}
                   placeholder="Maya Chen"
@@ -102,7 +104,7 @@ export function AuthScreen() {
               </label>
               <label>
                 Username
-                <input
+                <Input
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   placeholder="mayacuber"
@@ -113,7 +115,7 @@ export function AuthScreen() {
           )}
           <label>
             Email
-            <input
+            <Input
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -123,7 +125,7 @@ export function AuthScreen() {
           </label>
           <label>
             Password
-            <input
+            <Input
               type="password"
               minLength={6}
               value={password}
@@ -132,8 +134,8 @@ export function AuthScreen() {
               required
             />
           </label>
-          <button
-            className="min-h-[46px] bg-ink px-4 text-white"
+          <Button
+            className="min-h-[46px]"
             type="submit"
             disabled={loading}
           >
@@ -142,22 +144,23 @@ export function AuthScreen() {
               : mode === "signup"
                 ? "Create Account"
                 : "Sign In"}
-          </button>
+          </Button>
         </form>
         {message && (
           <p className="m-0 rounded-lg bg-panel p-3 font-bold text-ink">
             {message}
           </p>
         )}
-        <button
-          className="min-h-0 justify-self-start bg-transparent p-0 text-teal"
+        <Button
+          className="justify-self-start"
+          variant="link"
           type="button"
           onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
         >
           {mode === "signup"
             ? "Already have an account? Sign in"
             : "Need an account? Sign up"}
-        </button>
+        </Button>
       </section>
     </AuthShell>
   );
