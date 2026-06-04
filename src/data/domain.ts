@@ -79,6 +79,51 @@ export type WcaPersonalBest = {
   updatedAt: string;
 };
 
+export type LeaderboardMetric = "average" | "best" | "sessions" | "solves";
+
+export type LeaderboardEntry = {
+  profileId: string;
+  name: string;
+  handle: string;
+  avatar: string;
+  following: boolean;
+  rank: number;
+  eventLabel: string;
+  metric: LeaderboardMetric;
+  score: string;
+  scoreValue: number;
+  sessionCount: number;
+  solveCount: number;
+  best: string;
+  average: string;
+};
+
+export type BattleGoal = "best_single" | "average" | "most_solves";
+export type BattleStatus = "pending" | "active" | "completed" | "cancelled";
+
+export type BattleParticipant = {
+  id: string;
+  name: string;
+  handle: string;
+  avatar: string;
+  sessions: AppSession[];
+};
+
+export type AppBattle = {
+  id: string;
+  eventLabel: string;
+  goal: BattleGoal;
+  status: BattleStatus;
+  createdAt: string;
+  createdAtSort: string;
+  startsAt: string;
+  startsAtSort: string;
+  endsAt: string;
+  endsAtSort: string;
+  creator: BattleParticipant;
+  opponent: BattleParticipant;
+};
+
 export type SocialProfile = {
   id: string;
   name: string;

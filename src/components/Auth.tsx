@@ -9,6 +9,7 @@ export function AuthScreen() {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [useTestEmailAlias, setUseTestEmailAlias] = useState(true);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -24,10 +25,14 @@ export function AuthScreen() {
     }
 
     setLoading(true);
+    const authEmail =
+      mode === "signup" && useTestEmailAlias
+        ? makeTestEmailAlias(email, username)
+        : email.trim();
     const response =
       mode === "signup"
         ? await supabase.auth.signUp({
-            email,
+            email: authEmail,
             password,
             options: {
               data: {
@@ -41,13 +46,22 @@ export function AuthScreen() {
     setLoading(false);
 
     if (response.error) {
-      setMessage(response.error.message);
+      setMessage(authErrorMessage(response.error.message));
+      return;
+    }
+
+    if (mode === "signup" && !response.data.session) {
+      setMessage(
+        "Account created, but Supabase email confirmation is still enabled. Disable Confirm email in Supabase Auth settings for instant test signups.",
+      );
       return;
     }
 
     setMessage(
       mode === "signup"
-        ? "Account created. Check your email if confirmation is enabled."
+        ? useTestEmailAlias
+          ? `Account created and signed in with ${authEmail}.`
+          : "Account created and signed in."
         : "Signed in.",
     );
   }
@@ -123,6 +137,23 @@ export function AuthScreen() {
               required
             />
           </label>
+          {mode === "signup" && (
+            <label className="flex flex-row items-start gap-2 rounded-md border border-line bg-panel p-3 text-sm">
+              <input
+                className="mt-0.5 min-h-0 w-auto"
+                type="checkbox"
+                checked={useTestEmailAlias}
+                onChange={(event) => setUseTestEmailAlias(event.target.checked)}
+              />
+              <span>
+                Use testing email alias
+                <small className="mt-1 block font-normal text-muted">
+                  Creates accounts like {previewTestEmailAlias(email, username)}
+                  .
+                </small>
+              </span>
+            </label>
+          )}
           <label>
             Password
             <Input
@@ -164,6 +195,45 @@ export function AuthScreen() {
       </section>
     </AuthShell>
   );
+}
+
+function makeTestEmailAlias(email: string, username: string) {
+  const trimmedEmail = email.trim();
+  const atIndex = trimmedEmail.lastIndexOf("@");
+  if (atIndex <= 0) return trimmedEmail;
+
+  const local = trimmedEmail.slice(0, atIndex);
+  const domain = trimmedEmail.slice(atIndex + 1);
+  const suffix =
+    username
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || crypto.randomUUID().slice(0, 8);
+
+  return `${local}+cubeva-${suffix}@${domain}`;
+}
+
+function previewTestEmailAlias(email: string, username: string) {
+  if (!email.trim() || !email.includes("@")) {
+    return "you+cubeva-mayacuber@example.com";
+  }
+
+  return makeTestEmailAlias(email, username || "test");
+}
+
+function authErrorMessage(message: string) {
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("rate limit") ||
+    normalized.includes("confirmation email") ||
+    normalized.includes("magiclink")
+  ) {
+    return "Supabase is still trying to send confirmation emails and hit the email rate limit. Disable Confirm email in Supabase Auth settings, or use supabase/create-confirmed-test-users.sql and sign in with those seeded users.";
+  }
+
+  return message;
 }
 
 export function AuthShell({ children }: { children: React.ReactNode }) {

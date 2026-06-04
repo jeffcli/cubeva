@@ -3,7 +3,9 @@ import type { Session as AuthSession, User } from "@supabase/supabase-js";
 import { ActivityDetailPage } from "./components/ActivityDetailPage";
 import { AppSidebar } from "./components/AppSidebar";
 import { AuthScreen, AuthShell } from "./components/Auth";
+import { BattlesPage } from "./components/BattlesPage";
 import { FeedPage } from "./components/FeedPage";
+import { LeaderboardsPage } from "./components/LeaderboardsPage";
 import { NotificationBell } from "./components/NotificationBell";
 import { PeoplePage } from "./components/PeoplePage";
 import { ProfilePage } from "./components/ProfilePage";
@@ -11,8 +13,10 @@ import { TimerPage } from "./components/TimerPage";
 import { eventConfig, generateScramble } from "./cubing/scrambles";
 import {
   addSessionComment,
+  createBattle,
   deleteSessionComment,
   deleteSession,
+  fetchBattles,
   fetchDiscoverProfiles,
   fetchFollowingFeed,
   fetchNotifications,
@@ -22,17 +26,22 @@ import {
   fetchUserSessions,
   fetchWcaPersonalBests,
   getUserDisplay,
+  ensureProfile,
   errorMessage,
   markNotificationsRead,
   saveSession,
   setSessionKudos,
   setFollow,
   updateProfile,
+  updateBattleStatus,
   type AppComment,
+  type AppBattle,
   type AppNotification,
   type AppProfile,
   type AppSession,
   type AppSolve,
+  type BattleGoal,
+  type BattleStatus,
   type Penalty,
   type ProfileSocialCounts,
   type SocialProfile,
@@ -123,6 +132,7 @@ function CubeApp({
   const [userSessions, setUserSessions] = useState<AppSession[]>([]);
   const [feedSessions, setFeedSessions] = useState<AppSession[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [battles, setBattles] = useState<AppBattle[]>([]);
   const [following, setFollowing] = useState<FollowCandidate[]>([]);
   const [manualTime, setManualTime] = useState("");
   const [manualPenalty, setManualPenalty] = useState<Penalty>("ok");
@@ -138,6 +148,7 @@ function CubeApp({
   const [displayProfile, setDisplayProfile] = useState(getUserDisplay(user));
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [peopleLoading, setPeopleLoading] = useState(false);
+  const [battlesLoading, setBattlesLoading] = useState(false);
   const [sessionMessage, setSessionMessage] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [activeView, setActiveView] = useState<AppView>("feed");
@@ -165,6 +176,7 @@ function CubeApp({
   const [profileEditing, setProfileEditing] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMessage, setProfileMessage] = useState("");
+  const [battleMessage, setBattleMessage] = useState("");
   const startRef = useRef(0);
   const inspectionStartRef = useRef(0);
   const { displayName, username, initials } = displayProfile;
@@ -249,15 +261,19 @@ function CubeApp({
 
       setSessionsLoading(true);
       setPeopleLoading(true);
+      setBattlesLoading(true);
       setSessionMessage("");
 
       try {
+        await ensureProfile(user);
+
         const [
           profile,
           loadedSessions,
           loadedFeed,
           loadedPeople,
           loadedNotifications,
+          loadedBattles,
           loadedSocialCounts,
         ] =
           await Promise.all([
@@ -266,6 +282,7 @@ function CubeApp({
             fetchFollowingFeed(user.id),
             fetchDiscoverProfiles(user.id),
             fetchNotifications(user.id),
+            fetchBattles(user.id),
             fetchProfileSocialCounts(user.id),
           ]);
 
@@ -303,6 +320,7 @@ function CubeApp({
         setFeedSessions(loadedFeed);
         setFollowing(loadedPeople);
         setNotifications(loadedNotifications);
+        setBattles(loadedBattles);
         setProfileSocialCounts(loadedSocialCounts);
       } catch (error) {
         if (!cancelled) {
@@ -314,6 +332,7 @@ function CubeApp({
         if (!cancelled) {
           setSessionsLoading(false);
           setPeopleLoading(false);
+          setBattlesLoading(false);
         }
       }
     }
@@ -446,6 +465,12 @@ function CubeApp({
     return () => window.removeEventListener("keydown", handleTimerKeydown);
   }, [activeView, toggleTimer]);
 
+  useEffect(() => {
+    if (activeView !== "people") return;
+
+    void refreshPeople();
+  }, [activeView, user.id]);
+
   function addManualSolve() {
     const parsed = isManualOnlyEvent
       ? parseMoves(manualTime)
@@ -496,6 +521,7 @@ function CubeApp({
         solves,
       });
       setUserSessions((current) => [savedSession, ...current]);
+      setBattles(await fetchBattles(user.id));
       setSolves([]);
       setSessionMessage("Session saved.");
     } catch (error) {
@@ -875,6 +901,64 @@ function CubeApp({
     }
   }
 
+  async function refreshPeople() {
+    setPeopleLoading(true);
+    setSessionMessage("");
+
+    try {
+      setFollowing(await fetchDiscoverProfiles(user.id));
+    } catch (error) {
+      setSessionMessage(errorMessage(error, "Could not refresh people."));
+    } finally {
+      setPeopleLoading(false);
+    }
+  }
+
+  async function createHeadToHeadBattle({
+    durationDays,
+    eventLabel,
+    goal,
+    opponentId,
+  }: {
+    durationDays: number;
+    eventLabel: string;
+    goal: BattleGoal;
+    opponentId: string;
+  }) {
+    setBattleMessage("");
+    setBattlesLoading(true);
+
+    try {
+      await createBattle({
+        creatorId: user.id,
+        durationDays,
+        eventLabel,
+        goal,
+        opponentId,
+      });
+      setBattles(await fetchBattles(user.id));
+      setBattleMessage("Battle created. Publish sessions during the battle window to score.");
+    } catch (error) {
+      setBattleMessage(errorMessage(error, "Could not create battle."));
+    } finally {
+      setBattlesLoading(false);
+    }
+  }
+
+  async function setBattleStatus(battleId: string, status: BattleStatus) {
+    setBattleMessage("");
+
+    try {
+      await updateBattleStatus({ battleId, status });
+      setBattles(await fetchBattles(user.id));
+      setBattleMessage(
+        status === "completed" ? "Battle marked complete." : "Battle updated.",
+      );
+    } catch (error) {
+      setBattleMessage(errorMessage(error, "Could not update battle."));
+    }
+  }
+
   return (
     <main className="grid min-h-screen gap-[22px] p-[22px] [grid-template-columns:260px_minmax(360px,1fr)] max-[1120px]:[grid-template-columns:210px_minmax(0,1fr)] max-[760px]:flex max-[760px]:flex-col max-[760px]:p-3.5">
       <AppSidebar
@@ -993,7 +1077,38 @@ function CubeApp({
             people={following}
             loading={peopleLoading}
             onFollow={togglePersonFollow}
+            onRefresh={refreshPeople}
             onViewProfile={openCandidateProfile}
+          />
+        </section>
+
+        <section
+          className="flex min-w-0 flex-col gap-4"
+          hidden={activeView !== "leaderboards"}
+        >
+          <LeaderboardsPage
+            following={following}
+            self={{
+              id: user.id,
+              name: displayName,
+              handle: `@${username}`,
+              avatar: initials,
+              sessions: userSessions,
+            }}
+          />
+        </section>
+
+        <section
+          className="flex min-w-0 flex-col gap-4"
+          hidden={activeView !== "battles"}
+        >
+          <BattlesPage
+            battles={battles}
+            loading={battlesLoading}
+            message={battleMessage}
+            onCreateBattle={createHeadToHeadBattle}
+            onUpdateStatus={setBattleStatus}
+            people={following}
           />
         </section>
       </div>

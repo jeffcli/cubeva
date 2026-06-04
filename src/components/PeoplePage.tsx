@@ -1,4 +1,4 @@
-import { Search, UserPlus } from "lucide-react";
+import { RefreshCw, Search, UserPlus } from "lucide-react";
 import type { SocialProfile } from "../data/database";
 import { Button } from "./ui/button";
 
@@ -6,11 +6,13 @@ export function PeoplePage({
   people,
   loading,
   onFollow,
+  onRefresh,
   onViewProfile,
 }: {
   people: SocialProfile[];
   loading: boolean;
   onFollow: (person: SocialProfile) => void;
+  onRefresh: () => void;
   onViewProfile: (person: SocialProfile) => void;
 }) {
   return (
@@ -20,18 +22,33 @@ export function PeoplePage({
     >
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="m-0">Find cubers</h3>
-        {loading ? (
-          <span className="text-[0.85rem] font-extrabold text-soft-muted">
-            Loading
-          </span>
-        ) : (
-          <Search size={18} />
-        )}
+        <div className="flex items-center gap-2">
+          {loading ? (
+            <span className="text-[0.85rem] font-extrabold text-soft-muted">
+              Loading
+            </span>
+          ) : (
+            <Search size={18} />
+          )}
+          <Button
+            size="sm"
+            variant="secondary"
+            type="button"
+            onClick={onRefresh}
+            disabled={loading}
+          >
+            <RefreshCw size={15} /> Refresh
+          </Button>
+        </div>
       </div>
       {!loading && people.length === 0 && (
-        <p className="m-0 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
-          No other profiles yet. Create another account to test follows.
-        </p>
+        <div className="grid gap-2 rounded-lg bg-panel p-3 font-bold text-[#34413d]">
+          <p className="m-0">No other profiles are visible yet.</p>
+          <small className="font-medium text-muted">
+            People shows rows from public.profiles. If you created users in
+            Supabase Auth, run the profile backfill SQL once, then refresh.
+          </small>
+        </div>
       )}
       {people.map((person) => (
         <div

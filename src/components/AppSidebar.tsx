@@ -1,4 +1,12 @@
-import { Activity, LogOut, Timer, Trophy, Users } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  LogOut,
+  Swords,
+  Timer,
+  Trophy,
+  Users,
+} from "lucide-react";
 import type { AppView } from "../types/app";
 import { Button } from "./ui/button";
 
@@ -49,6 +57,18 @@ export function AppSidebar({
           icon={<Users size={18} />}
           label="People"
           onClick={() => onNavigate("people")}
+        />
+        <SidebarButton
+          active={activeView === "leaderboards"}
+          icon={<BarChart3 size={18} />}
+          label="Leaderboards"
+          onClick={() => onNavigate("leaderboards")}
+        />
+        <SidebarButton
+          active={activeView === "battles"}
+          icon={<Swords size={18} />}
+          label="Battles"
+          onClick={() => onNavigate("battles")}
         />
         <SidebarButton
           active={activeView === "profile"}

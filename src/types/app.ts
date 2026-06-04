@@ -4,7 +4,14 @@ import type {
   WcaPersonalBest,
 } from "../data/database";
 
-export type AppView = "activity" | "feed" | "people" | "profile" | "timer";
+export type AppView =
+  | "activity"
+  | "battles"
+  | "feed"
+  | "leaderboards"
+  | "people"
+  | "profile"
+  | "timer";
 export type TimerState = "ready" | "inspection" | "running";
 
 export type ProfileView = {

@@ -1,10 +1,13 @@
 import type { User } from "@supabase/supabase-js";
 import type {
   AppProfile,
+  AppBattle,
   AppSession,
   AppComment,
   AppNotification,
   AppSolve,
+  BattleGoal,
+  BattleStatus,
   NotificationType,
   Penalty,
   ProfileSocialCounts,
@@ -13,10 +16,15 @@ import type {
 } from "./domain";
 export type {
   AppProfile,
+  AppBattle,
   AppSession,
   AppComment,
   AppNotification,
   AppSolve,
+  BattleGoal,
+  BattleStatus,
+  LeaderboardEntry,
+  LeaderboardMetric,
   NotificationType,
   Penalty,
   ProfileSocialCounts,
@@ -27,6 +35,8 @@ import { supabase } from "../services/supabase";
 import { formatSessionTimestamp } from "../utils/dateUtils";
 
 const profileColumns = "id, display_name, username, bio, wca_id, created_at";
+const missingBattlesTableMessage =
+  "Battles are not set up in Supabase yet. Run supabase/add-battles.sql in the Supabase SQL editor, then try again.";
 
 export function errorMessage(error: unknown, fallback = "Something went wrong.") {
   if (error instanceof Error) return error.message;
@@ -40,6 +50,16 @@ export function errorMessage(error: unknown, fallback = "Something went wrong.")
   }
 
   return fallback;
+}
+
+function isMissingTableError(error: unknown, tableName: string) {
+  const message = errorMessage(error).toLowerCase();
+  return (
+    message.includes(tableName.toLowerCase()) &&
+    (message.includes("does not exist") ||
+      message.includes("schema cache") ||
+      message.includes("pgrst205"))
+  );
 }
 
 type SolveRow = {
@@ -107,6 +127,20 @@ type WcaPersonalBestRow = {
   updated_at: string;
 };
 
+type BattleRow = {
+  id: string;
+  creator_id: string;
+  opponent_id: string;
+  event_label: string;
+  goal: BattleGoal;
+  status: BattleStatus;
+  starts_at: string;
+  ends_at: string;
+  created_at: string;
+  creator: AppProfile | AppProfile[] | null;
+  opponent: AppProfile | AppProfile[] | null;
+};
+
 const emptySocialCounts: ProfileSocialCounts = {
   followers: 0,
   following: 0,
@@ -146,6 +180,43 @@ export async function fetchProfile(userId: string): Promise<AppProfile | null> {
 
   if (error) throw error;
   return data;
+}
+
+export async function ensureProfile(user: User) {
+  if (!supabase) return;
+
+  const { data: existingProfile, error: fetchError } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (fetchError) throw new Error(errorMessage(fetchError, "Could not check profile."));
+  if (existingProfile) return;
+
+  const display = getUserDisplay(user);
+  const baseUsername = display.username || `cuber-${user.id.slice(0, 8)}`;
+  const { error } = await supabase
+    .from("profiles")
+    .insert({
+      id: user.id,
+      username: baseUsername,
+      display_name: display.displayName,
+    });
+
+  if (!error) return;
+
+  const { error: fallbackError } = await supabase
+    .from("profiles")
+    .insert({
+      id: user.id,
+      username: `${baseUsername}-${user.id.slice(0, 8)}`,
+      display_name: display.displayName,
+    });
+
+  if (fallbackError) {
+    throw new Error(errorMessage(fallbackError, "Could not create profile."));
+  }
 }
 
 export async function updateProfile({
@@ -286,6 +357,92 @@ export async function fetchNotifications(userId: string): Promise<AppNotificatio
   }
 
   return ((data as NotificationRow[] | null) ?? []).map(mapNotificationRow);
+}
+
+export async function fetchBattles(userId: string): Promise<AppBattle[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("battles")
+    .select(
+      `id, creator_id, opponent_id, event_label, goal, status, starts_at, ends_at, created_at, creator:creator_id (${profileColumns}), opponent:opponent_id (${profileColumns})`,
+    )
+    .or(`creator_id.eq.${userId},opponent_id.eq.${userId}`)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (isMissingTableError(error, "battles")) {
+      return [];
+    }
+    throw error;
+  }
+
+  const battleRows = (data as BattleRow[] | null) ?? [];
+  const profiles = uniqueBattleProfiles(battleRows);
+  const sessionsByUser = await fetchPublicSessionsForUsers(profiles, userId);
+
+  return battleRows.map((battle) => mapBattleRow(battle, sessionsByUser));
+}
+
+export async function createBattle({
+  creatorId,
+  durationDays,
+  eventLabel,
+  goal,
+  opponentId,
+}: {
+  creatorId: string;
+  durationDays: number;
+  eventLabel: string;
+  goal: BattleGoal;
+  opponentId: string;
+}) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const startsAt = new Date();
+  const endsAt = new Date(startsAt);
+  endsAt.setDate(endsAt.getDate() + durationDays);
+
+  const { error } = await supabase.from("battles").insert({
+    creator_id: creatorId,
+    opponent_id: opponentId,
+    event_label: eventLabel,
+    goal,
+    status: "active",
+    starts_at: startsAt.toISOString(),
+    ends_at: endsAt.toISOString(),
+  });
+
+  if (error) {
+    if (isMissingTableError(error, "battles")) {
+      throw new Error(missingBattlesTableMessage);
+    }
+
+    throw new Error(errorMessage(error, "Could not create battle."));
+  }
+}
+
+export async function updateBattleStatus({
+  battleId,
+  status,
+}: {
+  battleId: string;
+  status: BattleStatus;
+}) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const { error } = await supabase
+    .from("battles")
+    .update({ status })
+    .eq("id", battleId);
+
+  if (error) {
+    if (isMissingTableError(error, "battles")) {
+      throw new Error(missingBattlesTableMessage);
+    }
+
+    throw new Error(errorMessage(error, "Could not update battle."));
+  }
 }
 
 export async function createNotification({
@@ -626,30 +783,6 @@ export async function deleteSessionComment(commentId: string) {
   if (error) throw new Error(errorMessage(error, "Could not delete comment."));
 }
 
-async function ensureProfile(user: User) {
-  if (!supabase) return;
-
-  const { data: existingProfile, error: fetchError } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (fetchError) throw new Error(errorMessage(fetchError, "Could not check profile."));
-  if (existingProfile) return;
-
-  const display = getUserDisplay(user);
-  const { error } = await supabase
-    .from("profiles")
-    .insert({
-      id: user.id,
-      username: display.username,
-      display_name: display.displayName,
-    });
-
-  if (error) throw new Error(errorMessage(error, "Could not create profile."));
-}
-
 function mapSessionRow(
   session: SessionRow,
   user: string,
@@ -780,6 +913,56 @@ function mapWcaPersonalBestRow(row: WcaPersonalBestRow): WcaPersonalBest {
     countryRankAverage: row.country_rank_average,
     continentRankAverage: row.continent_rank_average,
     updatedAt: row.updated_at,
+  };
+}
+
+function uniqueBattleProfiles(rows: BattleRow[]) {
+  const profiles = new Map<string, AppProfile>();
+
+  for (const row of rows) {
+    const creator = Array.isArray(row.creator) ? row.creator[0] : row.creator;
+    const opponent = Array.isArray(row.opponent) ? row.opponent[0] : row.opponent;
+    if (creator) profiles.set(creator.id, creator);
+    if (opponent) profiles.set(opponent.id, opponent);
+  }
+
+  return [...profiles.values()];
+}
+
+function mapBattleRow(
+  row: BattleRow,
+  sessionsByUser: Map<string, AppSession[]>,
+): AppBattle {
+  const creatorProfile = Array.isArray(row.creator) ? row.creator[0] : row.creator;
+  const opponentProfile = Array.isArray(row.opponent) ? row.opponent[0] : row.opponent;
+  const creatorDisplay = getUserDisplay(null, creatorProfile);
+  const opponentDisplay = getUserDisplay(null, opponentProfile);
+
+  return {
+    id: row.id,
+    eventLabel: row.event_label,
+    goal: row.goal,
+    status: row.status,
+    startsAt: formatSessionTimestamp(row.starts_at),
+    startsAtSort: row.starts_at,
+    endsAt: formatSessionTimestamp(row.ends_at),
+    endsAtSort: row.ends_at,
+    createdAt: formatSessionTimestamp(row.created_at),
+    createdAtSort: row.created_at,
+    creator: {
+      id: row.creator_id,
+      name: creatorDisplay.displayName,
+      handle: `@${creatorDisplay.username}`,
+      avatar: creatorDisplay.initials,
+      sessions: sessionsByUser.get(row.creator_id) ?? [],
+    },
+    opponent: {
+      id: row.opponent_id,
+      name: opponentDisplay.displayName,
+      handle: `@${opponentDisplay.username}`,
+      avatar: opponentDisplay.initials,
+      sessions: sessionsByUser.get(row.opponent_id) ?? [],
+    },
   };
 }
 

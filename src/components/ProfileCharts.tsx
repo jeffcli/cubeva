@@ -9,9 +9,9 @@ export function WeeklyProgressChart({
   progress: WeeklyProgress;
   selectedDayKey: string | null;
 }) {
-  const chartWidth = 560;
-  const chartHeight = 205;
-  const padding = { top: 22, right: 20, bottom: 32, left: 42 };
+  const chartWidth = 640;
+  const chartHeight = 260;
+  const padding = { top: 30, right: 26, bottom: 42, left: 42 };
   const plotWidth = chartWidth - padding.left - padding.right;
   const plotHeight = chartHeight - padding.top - padding.bottom;
   const selectedDay =
@@ -34,27 +34,53 @@ export function WeeklyProgressChart({
   const areaPath = `${linePath} L ${padding.left + plotWidth} ${padding.top + plotHeight} L ${padding.left} ${padding.top + plotHeight} Z`;
   const selectedPoint =
     points.find((point) => point.day.key === selectedDay?.key) ?? points.at(-1);
+  const selectedLabelX = selectedPoint
+    ? Math.min(
+        Math.max(selectedPoint.x, padding.left + 58),
+        chartWidth - padding.right - 58,
+      )
+    : 0;
+  const selectedLabelAnchor =
+    selectedPoint && selectedPoint.x < padding.left + 72
+      ? "start"
+      : selectedPoint && selectedPoint.x > chartWidth - padding.right - 72
+        ? "end"
+        : "middle";
 
   return (
-    <article className="grid min-w-0 gap-3.5 rounded-lg border border-line bg-card p-4 shadow-sm">
-      <div>
-        <h4 className="m-0 text-[1.3rem]">This week</h4>
-      </div>
-      <div className="grid grid-cols-3 gap-2.5 max-[760px]:grid-cols-1 [&_div]:grid [&_div]:gap-1 [&_div]:border-r [&_div]:border-line max-[760px]:[&_div]:border-r-0 max-[760px]:[&_div]:border-b max-[760px]:[&_div]:pb-2.5 [&_div:last-child]:border-0 max-[760px]:[&_div:last-child]:pb-0 [&_span]:text-[0.84rem] [&_span]:font-medium [&_span]:text-muted [&_strong]:text-[clamp(1.4rem,3.4vw,2.25rem)] [&_strong]:font-semibold [&_strong]:leading-none">
+    <article className="grid min-w-0 gap-4 rounded-lg border border-line bg-card p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3 max-[760px]:flex-col">
         <div>
-          <span>Solves</span>
-          <strong>{selectedDay?.value ?? 0}</strong>
+          <p className="m-0 text-[0.72rem] font-medium uppercase text-muted">
+            Last 7 days
+          </p>
+          <h4 className="m-0 text-[1.25rem] leading-tight">Progress</h4>
         </div>
-        <div>
-          <span>Sessions</span>
-          <strong>{selectedDay?.sessionCount ?? 0}</strong>
-        </div>
-        <div>
-          <span>Events</span>
-          <strong>{selectedDay?.eventCount ?? 0}</strong>
+        <div className="rounded-md border border-line bg-panel px-2.5 py-1 text-sm font-medium text-muted">
+          {progress.totalSolves} total solves
         </div>
       </div>
-      <div className="min-w-0 overflow-hidden">
+      <div className="grid grid-cols-3 gap-2 max-[760px]:grid-cols-1">
+        <div className="grid gap-1 rounded-md border border-line bg-card p-3">
+          <span className="text-sm font-medium text-muted">Solves</span>
+          <strong className="text-[1.75rem] font-semibold leading-none">
+            {selectedDay?.value ?? 0}
+          </strong>
+        </div>
+        <div className="grid gap-1 rounded-md border border-line bg-card p-3">
+          <span className="text-sm font-medium text-muted">Sessions</span>
+          <strong className="text-[1.75rem] font-semibold leading-none">
+            {selectedDay?.sessionCount ?? 0}
+          </strong>
+        </div>
+        <div className="grid gap-1 rounded-md border border-line bg-card p-3">
+          <span className="text-sm font-medium text-muted">Events</span>
+          <strong className="text-[1.75rem] font-semibold leading-none">
+            {selectedDay?.eventCount ?? 0}
+          </strong>
+        </div>
+      </div>
+      <div className="min-w-0 overflow-hidden rounded-md border border-line bg-panel/40 px-2 pb-1 pt-2">
         <svg
           className="block h-auto w-full overflow-visible"
           role="img"
@@ -63,22 +89,22 @@ export function WeeklyProgressChart({
         >
           <defs>
             <linearGradient id="weeklySolveFill" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#f06d2f" stopOpacity="0.32" />
-              <stop offset="100%" stopColor="#f06d2f" stopOpacity="0.04" />
+              <stop offset="0%" stopColor="#0f766e" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#0f766e" stopOpacity="0.02" />
             </linearGradient>
           </defs>
-          {[0, 0.5, 1].map((ratio) => {
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
             const y = padding.top + plotHeight - ratio * plotHeight;
             return (
               <g key={ratio}>
                 <line
-                  className="stroke-line stroke-[1]"
+                  className="stroke-line stroke-[1] opacity-70"
                   x1={padding.left}
                   x2={padding.left + plotWidth}
                   y1={y}
                   y2={y}
                 />
-                <text className="fill-muted text-[13px]" x={8} y={y + 5}>
+                <text className="fill-muted text-[12px]" x={8} y={y + 4}>
                   {Math.round(maxValue * ratio)}
                 </text>
               </g>
@@ -93,7 +119,7 @@ export function WeeklyProgressChart({
             return (
               <g key={day.label}>
                 <line
-                  className="stroke-line stroke-[1] opacity-[0.72]"
+                  className="stroke-line stroke-[1] opacity-40"
                   x1={x}
                   x2={x}
                   y1={padding.top}
@@ -112,7 +138,7 @@ export function WeeklyProgressChart({
           })}
           <path fill='url("#weeklySolveFill")' d={areaPath} />
           <path
-            className="fill-none stroke-orange stroke-[5] [stroke-linecap:round] [stroke-linejoin:round]"
+            className="fill-none stroke-teal stroke-[3] [stroke-linecap:round] [stroke-linejoin:round]"
             d={linePath}
           />
           {points.map((point) => (
@@ -132,47 +158,47 @@ export function WeeklyProgressChart({
               <circle
                 className={
                   point.day.key === selectedPoint?.day.key
-                    ? "fill-orange stroke-orange stroke-[5]"
-                    : "fill-card stroke-orange stroke-[5]"
+                    ? "fill-teal stroke-card stroke-[3]"
+                    : "fill-card stroke-teal stroke-[3]"
                 }
                 cx={point.x}
                 cy={point.y}
-                r="6"
+                r={point.day.key === selectedPoint?.day.key ? "7" : "5"}
               />
               <circle
-                className="fill-orange opacity-0 group-hover:opacity-[0.12] group-focus:opacity-[0.12]"
+                className="fill-teal opacity-0 transition-opacity group-hover:opacity-[0.12] group-focus:opacity-[0.12]"
                 cx={point.x}
                 cy={point.y}
-                r="18"
+                r="16"
               />
             </g>
           ))}
           {selectedPoint && (
             <>
               <line
-                className="stroke-orange stroke-[4]"
+                className="stroke-teal stroke-[2] opacity-80"
                 x1={selectedPoint.x}
                 x2={selectedPoint.x}
                 y1={padding.top}
                 y2={padding.top + plotHeight}
               />
               <circle
-                className="fill-orange opacity-[0.18]"
+                className="fill-teal opacity-[0.14]"
                 cx={selectedPoint.x}
                 cy={selectedPoint.y}
-                r="20"
+                r="18"
               />
               <circle
-                className="fill-orange stroke-orange"
+                className="fill-teal stroke-card stroke-[3]"
                 cx={selectedPoint.x}
                 cy={selectedPoint.y}
-                r="10"
+                r="8"
               />
               <text
-                className="fill-orange text-[17px] font-black"
-                textAnchor="end"
-                x={selectedPoint.x}
-                y={padding.top - 8}
+                className="fill-teal text-[14px] font-semibold"
+                textAnchor={selectedLabelAnchor}
+                x={selectedLabelX}
+                y={padding.top - 10}
               >
                 {selectedPoint.day.value} solves
               </text>

@@ -81,6 +81,20 @@ create table public.notifications (
   check (recipient_id <> actor_id)
 );
 
+create table public.battles (
+  id uuid primary key default gen_random_uuid(),
+  creator_id uuid references public.profiles(id) on delete cascade not null,
+  opponent_id uuid references public.profiles(id) on delete cascade not null,
+  event_label text not null,
+  goal text default 'best_single' not null check (goal in ('best_single', 'average', 'most_solves')),
+  status text default 'active' not null check (status in ('pending', 'active', 'completed', 'cancelled')),
+  starts_at timestamptz default now() not null,
+  ends_at timestamptz not null,
+  created_at timestamptz default now() not null,
+  check (creator_id <> opponent_id),
+  check (ends_at > starts_at)
+);
+
 create index sessions_user_created_idx on public.sessions (user_id, created_at desc);
 create index solves_session_created_idx on public.solves (session_id, created_at desc);
 create index follows_following_idx on public.follows (following_id);
@@ -88,6 +102,8 @@ create index session_kudos_user_idx on public.session_kudos (user_id);
 create index session_comments_session_created_idx on public.session_comments (session_id, created_at asc);
 create index notifications_recipient_created_idx on public.notifications (recipient_id, created_at desc);
 create index notifications_unread_idx on public.notifications (recipient_id, read) where read = false;
+create index battles_creator_created_idx on public.battles (creator_id, created_at desc);
+create index battles_opponent_created_idx on public.battles (opponent_id, created_at desc);
 
 alter table public.profiles enable row level security;
 alter table public.wca_personal_bests enable row level security;
@@ -97,6 +113,7 @@ alter table public.solves enable row level security;
 alter table public.session_kudos enable row level security;
 alter table public.session_comments enable row level security;
 alter table public.notifications enable row level security;
+alter table public.battles enable row level security;
 
 create policy "Profiles are visible to everyone"
   on public.profiles for select
@@ -209,6 +226,19 @@ create policy "Users can mark their own notifications read"
   on public.notifications for update
   using (auth.uid() = recipient_id)
   with check (auth.uid() = recipient_id);
+
+create policy "Battle participants can read battles"
+  on public.battles for select
+  using (auth.uid() = creator_id or auth.uid() = opponent_id);
+
+create policy "Users can create battles as themselves"
+  on public.battles for insert
+  with check (auth.uid() = creator_id and creator_id <> opponent_id);
+
+create policy "Battle participants can update battles"
+  on public.battles for update
+  using (auth.uid() = creator_id or auth.uid() = opponent_id)
+  with check (auth.uid() = creator_id or auth.uid() = opponent_id);
 
 create function public.notify_on_follow()
 returns trigger
@@ -330,11 +360,12 @@ begin
   insert into public.profiles (id, username, display_name, avatar_url, bio)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data ->> 'username', split_part(new.email, '@', 1)),
+    coalesce(new.raw_user_meta_data ->> 'username', split_part(new.email, '@', 1)) || '-' || left(new.id::text, 8),
     coalesce(new.raw_user_meta_data ->> 'display_name', split_part(new.email, '@', 1)),
     null,
     null
-  );
+  )
+  on conflict (id) do nothing;
   return new;
 end;
 $$;
