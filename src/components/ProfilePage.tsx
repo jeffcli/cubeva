@@ -182,7 +182,7 @@ export function ProfilePage({
             <Input
               value={form.wcaId}
               onChange={(event) =>
-                onFormChange({ ...form, wcaId: event.target.value })
+                onFormChange({ ...form, wcaId: event.target.value.toUpperCase() })
               }
               placeholder="2019SMIT01"
             />

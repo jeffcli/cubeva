@@ -24,10 +24,12 @@ import {
   fetchProfileSocialCounts,
   fetchPublicSessionsForProfile,
   fetchUserSessions,
+  fetchOfficialWcaPersonalBests,
   fetchWcaPersonalBests,
   getUserDisplay,
   ensureProfile,
   errorMessage,
+  importWcaPersonalBests,
   markNotificationsRead,
   saveSession,
   setSessionKudos,
@@ -312,7 +314,7 @@ function CubeApp({
             wcaId: profile.wca_id ?? "",
           });
           setProfileWcaPersonalBests(
-            profile.wca_id ? await fetchWcaPersonalBests(profile.wca_id) : [],
+            profile.wca_id ? await loadWcaPersonalBests(profile.wca_id) : [],
           );
         }
 
@@ -586,11 +588,7 @@ function CubeApp({
         wcaId: profileForm.wcaId,
       });
       const updatedDisplay = getUserDisplay(user, updated);
-      const wcaPersonalBests = updated.wca_id
-        ? await fetchWcaPersonalBests(updated.wca_id)
-        : [];
       setProfileRecord(updated);
-      setProfileWcaPersonalBests(wcaPersonalBests);
       setDisplayProfile(updatedDisplay);
       setProfileForm({
         displayName: updatedDisplay.displayName,
@@ -599,7 +597,30 @@ function CubeApp({
         wcaId: updated.wca_id ?? "",
       });
       setProfileEditing(false);
-      setProfileMessage("Profile saved.");
+      let profileSaveMessage = "Profile saved.";
+      let wcaPersonalBests: WcaPersonalBest[] = [];
+
+      if (updated.wca_id) {
+        try {
+          wcaPersonalBests = await loadWcaPersonalBests(updated.wca_id);
+
+          if (wcaPersonalBests.length === 0) {
+            await importWcaPersonalBests(updated.wca_id);
+            wcaPersonalBests = await loadWcaPersonalBests(updated.wca_id);
+          }
+
+          if (wcaPersonalBests.length === 0) {
+            profileSaveMessage =
+              "Profile saved. No official WCA personal bests were found yet.";
+          }
+        } catch {
+          profileSaveMessage =
+            "Profile saved. WCA PBs could not be loaded yet.";
+        }
+      }
+
+      setProfileWcaPersonalBests(wcaPersonalBests);
+      setProfileMessage(profileSaveMessage);
     } catch (error) {
       setProfileMessage(
         error instanceof Error ? error.message : "Could not save profile.",
@@ -623,7 +644,7 @@ function CubeApp({
         wcaId = profile.wca_id ?? "";
         [sessions, wcaPersonalBests, socialCounts] = await Promise.all([
           fetchPublicSessionsForProfile(profile, user.id),
-          wcaId ? fetchWcaPersonalBests(wcaId) : Promise.resolve([]),
+          wcaId ? loadWcaPersonalBests(wcaId) : Promise.resolve([]),
           fetchProfileSocialCounts(profile.id),
         ]);
       }
@@ -1125,4 +1146,11 @@ function isTypingTarget(target: EventTarget | null) {
     target.tagName === "TEXTAREA" ||
     target.tagName === "SELECT"
   );
+}
+
+async function loadWcaPersonalBests(wcaId: string): Promise<WcaPersonalBest[]> {
+  const cachedPersonalBests = await fetchWcaPersonalBests(wcaId);
+  if (cachedPersonalBests.length) return cachedPersonalBests;
+
+  return fetchOfficialWcaPersonalBests(wcaId);
 }

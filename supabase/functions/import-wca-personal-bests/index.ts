@@ -81,11 +81,6 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "Use POST for WCA imports." }, 405);
   }
 
-  const importSecret = Deno.env.get("IMPORT_WCA_SECRET");
-  if (importSecret && request.headers.get("x-import-secret") !== importSecret) {
-    return jsonResponse({ error: "Unauthorized import request." }, 401);
-  }
-
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -101,6 +96,20 @@ Deno.serve(async (request) => {
   });
 
   const payload = await readJsonPayload(request);
+  const importSecret = Deno.env.get("IMPORT_WCA_SECRET");
+  const hasImportSecret =
+    Boolean(importSecret) && request.headers.get("x-import-secret") === importSecret;
+
+  if (!hasImportSecret) {
+    const authError = await authorizeSingleProfileImport(
+      request,
+      payload,
+      supabase,
+    );
+
+    if (authError) return authError;
+  }
+
   const wcaIds = payload.all
     ? await fetchLinkedWcaIds(supabase)
     : normalizeRequestedWcaIds(payload);
@@ -141,6 +150,47 @@ Deno.serve(async (request) => {
 
   return jsonResponse({ importedCount, results });
 });
+
+async function authorizeSingleProfileImport(
+  request: Request,
+  payload: ImportPayload,
+  supabase: SupabaseClient,
+) {
+  if (payload.all || payload.wcaIds?.length || !payload.wcaId) {
+    return jsonResponse({ error: "Unauthorized import request." }, 401);
+  }
+
+  const wcaId = normalizeWcaId(payload.wcaId);
+  if (!isValidWcaId(wcaId)) {
+    return jsonResponse({ error: "Invalid WCA ID." }, 400);
+  }
+
+  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) {
+    return jsonResponse({ error: "Unauthorized import request." }, 401);
+  }
+
+  const { data: authData, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !authData.user) {
+    return jsonResponse({ error: "Unauthorized import request." }, 401);
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("wca_id")
+    .eq("id", authData.user.id)
+    .single();
+
+  if (profileError) {
+    return jsonResponse({ error: "Could not verify profile WCA ID." }, 500);
+  }
+
+  if (normalizeWcaId(profile?.wca_id) !== wcaId) {
+    return jsonResponse({ error: "WCA ID must be saved to your profile first." }, 403);
+  }
+
+  return null;
+}
 
 async function readJsonPayload(request: Request): Promise<ImportPayload> {
   try {

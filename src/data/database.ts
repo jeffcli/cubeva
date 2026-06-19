@@ -37,6 +37,29 @@ import { formatSessionTimestamp } from "../utils/dateUtils";
 const profileColumns = "id, display_name, username, bio, wca_id, created_at";
 const missingBattlesTableMessage =
   "Battles are not set up in Supabase yet. Run supabase/add-battles.sql in the Supabase SQL editor, then try again.";
+const wcaIdPattern = /^[0-9]{4}[A-Z]{4}[0-9]{2}$/;
+const wcaPersonApiBase =
+  "https://raw.githubusercontent.com/robiningelbrecht/wca-rest-api/refs/heads/v1/persons";
+
+const wcaEventNames: Record<string, string> = {
+  "222": "2x2x2 Cube",
+  "333": "3x3x3 Cube",
+  "444": "4x4x4 Cube",
+  "555": "5x5x5 Cube",
+  "666": "6x6x6 Cube",
+  "777": "7x7x7 Cube",
+  "333bf": "3x3x3 Blindfolded",
+  "333fm": "3x3x3 Fewest Moves",
+  "333mbf": "3x3x3 Multi-Blind",
+  "333oh": "3x3x3 One-Handed",
+  "444bf": "4x4x4 Blindfolded",
+  "555bf": "5x5x5 Blindfolded",
+  clock: "Clock",
+  minx: "Megaminx",
+  pyram: "Pyraminx",
+  skewb: "Skewb",
+  sq1: "Square-1",
+};
 
 export function errorMessage(error: unknown, fallback = "Something went wrong.") {
   if (error instanceof Error) return error.message;
@@ -50,6 +73,35 @@ export function errorMessage(error: unknown, fallback = "Something went wrong.")
   }
 
   return fallback;
+}
+
+function profileSaveErrorMessage(error: unknown) {
+  const message = errorMessage(error, "Could not save profile.");
+  const lowerMessage = message.toLowerCase();
+
+  if (
+    lowerMessage.includes("wca_id") &&
+    (lowerMessage.includes("duplicate") || lowerMessage.includes("unique"))
+  ) {
+    return "That WCA ID is already linked to another profile.";
+  }
+
+  if (
+    lowerMessage.includes("username") &&
+    (lowerMessage.includes("duplicate") || lowerMessage.includes("unique"))
+  ) {
+    return "That username is already taken.";
+  }
+
+  if (
+    lowerMessage.includes("wca_id") &&
+    (lowerMessage.includes("foreign key") ||
+      lowerMessage.includes("violates foreign key constraint"))
+  ) {
+    return "WCA IDs should save before PBs are imported. Run supabase/fix-wca-id-save.sql in Supabase, then try again.";
+  }
+
+  return message;
 }
 
 function isMissingTableError(error: unknown, tableName: string) {
@@ -125,6 +177,23 @@ type WcaPersonalBestRow = {
   country_rank_average: number | null;
   continent_rank_average: number | null;
   updated_at: string;
+};
+
+type WcaRankEntry = {
+  eventId?: string;
+  best?: number;
+  rank?: {
+    world?: number;
+    country?: number;
+    continent?: number;
+  };
+};
+
+type WcaPerson = {
+  rank?: {
+    singles?: WcaRankEntry[];
+    averages?: WcaRankEntry[];
+  };
 };
 
 type BattleRow = {
@@ -235,6 +304,9 @@ export async function updateProfile({
   if (!supabase) throw new Error("Supabase is not configured.");
 
   const normalizedWcaId = normalizeWcaId(wcaId);
+  if (normalizedWcaId && !wcaIdPattern.test(normalizedWcaId)) {
+    throw new Error("WCA ID should look like 2019SMIT01.");
+  }
 
   const { data, error } = await supabase
     .from("profiles")
@@ -248,7 +320,7 @@ export async function updateProfile({
     .select(profileColumns)
     .single();
 
-  if (error) throw error;
+  if (error) throw new Error(profileSaveErrorMessage(error));
   return data;
 }
 
@@ -266,9 +338,94 @@ export async function fetchWcaPersonalBests(wcaId: string): Promise<WcaPersonalB
     .eq("wca_id", normalizedWcaId)
     .order("event_name", { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    if (isMissingTableError(error, "wca_personal_bests")) {
+      return [];
+    }
+
+    throw error;
+  }
 
   return ((data as WcaPersonalBestRow[] | null) ?? []).map(mapWcaPersonalBestRow);
+}
+
+export async function fetchOfficialWcaPersonalBests(
+  wcaId: string,
+): Promise<WcaPersonalBest[]> {
+  const normalizedWcaId = normalizeWcaId(wcaId);
+  if (!normalizedWcaId) return [];
+  if (!wcaIdPattern.test(normalizedWcaId)) {
+    throw new Error("WCA ID should look like 2019SMIT01.");
+  }
+
+  const response = await fetch(`${wcaPersonApiBase}/${normalizedWcaId}.json`);
+
+  if (response.status === 404) {
+    throw new Error("That WCA ID was not found.");
+  }
+
+  if (!response.ok) {
+    throw new Error(`WCA returned ${response.status}. Try again later.`);
+  }
+
+  const person = (await response.json()) as WcaPerson;
+  const byEvent = new Map<string, WcaPersonalBest>();
+  const updatedAt = new Date().toISOString();
+
+  for (const single of person.rank?.singles ?? []) {
+    if (!single.eventId) continue;
+    const personalBest = getOrCreateOfficialWcaPersonalBest(
+      byEvent,
+      normalizedWcaId,
+      single.eventId,
+      updatedAt,
+    );
+    personalBest.bestSingle = numberOrNull(single.best);
+    personalBest.worldRankSingle = numberOrNull(single.rank?.world);
+    personalBest.countryRankSingle = numberOrNull(single.rank?.country);
+    personalBest.continentRankSingle = numberOrNull(single.rank?.continent);
+  }
+
+  for (const average of person.rank?.averages ?? []) {
+    if (!average.eventId) continue;
+    const personalBest = getOrCreateOfficialWcaPersonalBest(
+      byEvent,
+      normalizedWcaId,
+      average.eventId,
+      updatedAt,
+    );
+    personalBest.bestAverage = numberOrNull(average.best);
+    personalBest.worldRankAverage = numberOrNull(average.rank?.world);
+    personalBest.countryRankAverage = numberOrNull(average.rank?.country);
+    personalBest.continentRankAverage = numberOrNull(average.rank?.continent);
+  }
+
+  return [...byEvent.values()].sort((a, b) =>
+    a.eventName.localeCompare(b.eventName),
+  );
+}
+
+export async function importWcaPersonalBests(wcaId: string) {
+  if (!supabase) return false;
+
+  const normalizedWcaId = normalizeWcaId(wcaId);
+  if (!normalizedWcaId || !wcaIdPattern.test(normalizedWcaId)) return false;
+
+  const { data, error } = await supabase.functions.invoke<{
+    importedCount: number;
+    results: { status: string; error?: string }[];
+  }>("import-wca-personal-bests", {
+    body: { wcaId: normalizedWcaId },
+  });
+
+  if (error) throw error;
+
+  const result = data?.results?.[0];
+  if (result?.status === "error") {
+    throw new Error(result.error ?? "Could not import WCA personal bests.");
+  }
+
+  return Boolean(data?.importedCount);
 }
 
 export async function fetchUserSessions(user: User): Promise<AppSession[]> {
@@ -897,6 +1054,36 @@ function parseSolveResultType(solve: SolveRow): "time" | "moves" {
 function normalizeWcaId(wcaId: string) {
   const trimmed = wcaId.trim().toUpperCase();
   return trimmed.length ? trimmed : null;
+}
+
+function numberOrNull(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function getOrCreateOfficialWcaPersonalBest(
+  byEvent: Map<string, WcaPersonalBest>,
+  wcaId: string,
+  eventId: string,
+  updatedAt: string,
+) {
+  if (!byEvent.has(eventId)) {
+    byEvent.set(eventId, {
+      wcaId,
+      eventId,
+      eventName: wcaEventNames[eventId] ?? eventId,
+      bestSingle: null,
+      bestAverage: null,
+      worldRankSingle: null,
+      countryRankSingle: null,
+      continentRankSingle: null,
+      worldRankAverage: null,
+      countryRankAverage: null,
+      continentRankAverage: null,
+      updatedAt,
+    });
+  }
+
+  return byEvent.get(eventId) as WcaPersonalBest;
 }
 
 function mapWcaPersonalBestRow(row: WcaPersonalBestRow): WcaPersonalBest {
