@@ -86,7 +86,7 @@ export function TimerPage({
 }) {
   return (
     <section className="flex min-w-0 flex-col gap-4" id="timer">
-      <section className="grid items-stretch gap-4 [grid-template-columns:minmax(0,1.05fr)_minmax(340px,0.95fr)] max-[980px]:grid-cols-1">
+      <section className="grid items-stretch gap-4 grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)] max-[980px]:grid-cols-1">
         <section className="grid h-full gap-4 rounded-lg border border-line bg-card p-5 shadow-sm">
           <div
             aria-label="Current scramble"
@@ -95,7 +95,7 @@ export function TimerPage({
             {scrambleLoading ? "Generating scramble..." : currentScramble}
           </div>
           {isManualOnlyEvent ? (
-            <div className="grid min-h-[180px] place-content-center gap-2 rounded-lg border-[3px] border-ink bg-panel text-center">
+            <div className="grid min-h-45 place-content-center gap-2 rounded-lg border-[3px] border-ink bg-panel text-center">
               <strong className="text-[clamp(2rem,5vw,4rem)] leading-none">
                 FMC manual entry
               </strong>
@@ -103,7 +103,7 @@ export function TimerPage({
             </div>
           ) : (
             <button
-              className={`grid min-h-[250px] w-full place-items-center border-[5px] border-ink text-center text-ink max-[760px]:min-h-[210px] ${
+              className={`grid min-h-62.5 w-full place-items-center border-[5px] border-ink text-center text-ink max-[760px]:min-h-52.5 ${
                 timerState === "running"
                   ? "bg-green"
                   : timerState === "inspection"
@@ -187,7 +187,7 @@ export function TimerPage({
         <h3 className="m-0">
           {isManualOnlyEvent ? "FMC entry" : "Manual log"}
         </h3>
-        <div className="mt-3 flex items-center gap-3 max-[760px]:flex-col max-[760px]:items-stretch [&_input]:min-w-[120px] [&_input]:flex-1">
+        <div className="mt-3 flex items-center gap-3 max-[760px]:flex-col max-[760px]:items-stretch [&_input]:min-w-30 [&_input]:flex-1">
           <Input
             inputMode={isManualOnlyEvent ? "numeric" : "decimal"}
             placeholder={isManualOnlyEvent ? "32 moves" : "18.42"}
@@ -195,6 +195,7 @@ export function TimerPage({
             onChange={(event) => onManualTimeChange(event.target.value)}
           />
           <Select
+            className="max-[760px]:w-full"
             value={manualPenalty}
             onChange={(event) =>
               onManualPenaltyChange(event.target.value as Penalty)
@@ -204,15 +205,11 @@ export function TimerPage({
             {!isManualOnlyEvent && <option value="+2">+2</option>}
             <option value="dnf">DNF</option>
           </Select>
-          <Button
-            size="lg"
-            type="button"
-            onClick={addManualSolve}
-          >
+          <Button size="lg" type="button" onClick={addManualSolve}>
             <Plus size={18} /> Add
           </Button>
         </div>
-        <div className="mt-3 grid items-stretch gap-2.5 [grid-template-columns:minmax(0,1fr)_auto] max-[760px]:flex max-[760px]:flex-col [&_textarea]:min-w-[120px] [&_textarea]:flex-1">
+        <div className="mt-3 grid items-stretch gap-2.5 grid-cols-[minmax(0,1fr)_auto] max-[760px]:flex max-[760px]:flex-col [&_textarea]:min-w-30 [&_textarea]:flex-1">
           <Textarea
             rows={3}
             placeholder={
@@ -223,11 +220,7 @@ export function TimerPage({
             value={importText}
             onChange={(event) => onImportTextChange(event.target.value)}
           />
-          <Button
-            size="lg"
-            type="button"
-            onClick={importSolves}
-          >
+          <Button size="lg" type="button" onClick={importSolves}>
             <Plus size={18} />{" "}
             {isManualOnlyEvent ? "Import Results" : "Import Times"}
           </Button>
@@ -243,7 +236,7 @@ export function TimerPage({
         </div>
         {solves.map((solve, index) => (
           <div
-            className="grid min-h-[54px] items-center gap-2.5 border-t border-rule [grid-template-columns:46px_90px_76px_minmax(0,1fr)_42px] max-[760px]:[grid-template-columns:42px_80px_76px_42px]"
+            className="grid min-h-13.5 items-center gap-2.5 border-t border-rule grid-cols-[46px_90px_76px_minmax(0,1fr)_42px] max-[760px]:grid-cols-[42px_80px_76px_42px]"
             key={solve.id}
           >
             <span>#{solves.length - index}</span>

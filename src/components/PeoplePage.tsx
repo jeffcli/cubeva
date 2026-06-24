@@ -1,4 +1,4 @@
-import { RefreshCw, Search, UserPlus } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 import type { SocialProfile } from "../data/database";
 import { Button } from "./ui/button";
 
@@ -6,13 +6,11 @@ export function PeoplePage({
   people,
   loading,
   onFollow,
-  onRefresh,
   onViewProfile,
 }: {
   people: SocialProfile[];
   loading: boolean;
   onFollow: (person: SocialProfile) => void;
-  onRefresh: () => void;
   onViewProfile: (person: SocialProfile) => void;
 }) {
   return (
@@ -30,15 +28,6 @@ export function PeoplePage({
           ) : (
             <Search size={18} />
           )}
-          <Button
-            size="sm"
-            variant="secondary"
-            type="button"
-            onClick={onRefresh}
-            disabled={loading}
-          >
-            <RefreshCw size={15} /> Refresh
-          </Button>
         </div>
       </div>
       {!loading && people.length === 0 && (

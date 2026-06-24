@@ -1098,7 +1098,6 @@ function CubeApp({
             people={following}
             loading={peopleLoading}
             onFollow={togglePersonFollow}
-            onRefresh={refreshPeople}
             onViewProfile={openCandidateProfile}
           />
         </section>

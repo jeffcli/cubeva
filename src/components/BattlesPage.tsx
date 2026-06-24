@@ -120,7 +120,6 @@ export function BattlesPage({
               <option value="1">1 day</option>
               <option value="3">3 days</option>
               <option value="7">7 days</option>
-              <option value="14">14 days</option>
             </Select>
           </label>
         </div>
@@ -258,7 +257,9 @@ function scoreBattle(battle: AppBattle) {
           isInBattleWindow(session, battle),
       )
       .flatMap((session) => session.solves);
-    const validSolves = solves.filter((solve) => Number.isFinite(effectiveTime(solve)));
+    const validSolves = solves.filter((solve) =>
+      Number.isFinite(effectiveTime(solve)),
+    );
 
     const scoreValue =
       battle.goal === "most_solves"
@@ -266,8 +267,10 @@ function scoreBattle(battle: AppBattle) {
         : battle.goal === "best_single" && validSolves.length
           ? Math.min(...validSolves.map(effectiveTime))
           : battle.goal === "average" && validSolves.length
-            ? validSolves.reduce((sum, solve) => sum + effectiveTime(solve), 0) /
-              validSolves.length
+            ? validSolves.reduce(
+                (sum, solve) => sum + effectiveTime(solve),
+                0,
+              ) / validSolves.length
             : Number.POSITIVE_INFINITY;
     const score =
       battle.goal === "most_solves"

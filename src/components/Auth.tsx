@@ -9,7 +9,6 @@ export function AuthScreen() {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [useTestEmailAlias, setUseTestEmailAlias] = useState(true);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -25,10 +24,7 @@ export function AuthScreen() {
     }
 
     setLoading(true);
-    const authEmail =
-      mode === "signup" && useTestEmailAlias
-        ? makeTestEmailAlias(email, username)
-        : email.trim();
+    const authEmail = email.trim();
     const response =
       mode === "signup"
         ? await supabase.auth.signUp({
@@ -58,18 +54,14 @@ export function AuthScreen() {
     }
 
     setMessage(
-      mode === "signup"
-        ? useTestEmailAlias
-          ? `Account created and signed in with ${authEmail}.`
-          : "Account created and signed in."
-        : "Signed in.",
+      mode === "signup" ? "Account created and signed in." : "Signed in.",
     );
   }
 
   if (!isSupabaseConfigured) {
     return (
       <AuthShell>
-        <section className="grid w-[min(100%,480px)] max-w-[480px] gap-4 rounded-lg border border-line bg-card p-6 shadow-md [&>h1]:m-0 [&>p]:m-0">
+        <section className="grid w-[min(100%,480px)] max-w-120 gap-4 rounded-lg border border-line bg-card p-6 shadow-md [&>h1]:m-0 [&>p]:m-0">
           <p className="m-0 text-[0.72rem] font-black uppercase text-soft-muted">
             Auth setup
           </p>
@@ -80,7 +72,7 @@ export function AuthScreen() {
             Create a `.env.local` file from `.env.example`, paste your project
             URL and anon key, then restart `npm run dev`.
           </p>
-          <div className="rounded-lg bg-ink p-3.5 text-center font-mono text-[0.86rem] leading-[1.7] text-[#f8f2e7] [overflow-wrap:anywhere]">
+          <div className="rounded-lg bg-ink p-3.5 text-center font-mono text-[0.86rem] leading-[1.7] text-[#f8f2e7] wrap-anywhere">
             VITE_SUPABASE_URL=https://your-project.supabase.co
             <br />
             VITE_SUPABASE_ANON_KEY=your-anon-key
@@ -92,7 +84,7 @@ export function AuthScreen() {
 
   return (
     <AuthShell>
-      <section className="grid w-[min(100%,480px)] max-w-[480px] gap-4 rounded-lg border border-line bg-card p-6 shadow-md [&>h1]:m-0 [&>p]:m-0">
+      <section className="grid w-[min(100%,480px)] max-w-120 gap-4 rounded-lg border border-line bg-card p-6 shadow-md [&>h1]:m-0 [&>p]:m-0">
         <p className="text-[0.72rem] font-black uppercase text-soft-muted">
           Welcome to CubeVa
         </p>
@@ -137,23 +129,7 @@ export function AuthScreen() {
               required
             />
           </label>
-          {mode === "signup" && (
-            <label className="flex flex-row items-start gap-2 rounded-md border border-line bg-panel p-3 text-sm">
-              <input
-                className="mt-0.5 min-h-0 w-auto"
-                type="checkbox"
-                checked={useTestEmailAlias}
-                onChange={(event) => setUseTestEmailAlias(event.target.checked)}
-              />
-              <span>
-                Use testing email alias
-                <small className="mt-1 block font-normal text-muted">
-                  Creates accounts like {previewTestEmailAlias(email, username)}
-                  .
-                </small>
-              </span>
-            </label>
-          )}
+
           <label>
             Password
             <Input
@@ -165,11 +141,7 @@ export function AuthScreen() {
               required
             />
           </label>
-          <Button
-            className="min-h-[46px]"
-            type="submit"
-            disabled={loading}
-          >
+          <Button className="min-h-11.5" type="submit" disabled={loading}>
             {loading
               ? "Working..."
               : mode === "signup"
@@ -197,31 +169,6 @@ export function AuthScreen() {
   );
 }
 
-function makeTestEmailAlias(email: string, username: string) {
-  const trimmedEmail = email.trim();
-  const atIndex = trimmedEmail.lastIndexOf("@");
-  if (atIndex <= 0) return trimmedEmail;
-
-  const local = trimmedEmail.slice(0, atIndex);
-  const domain = trimmedEmail.slice(atIndex + 1);
-  const suffix =
-    username
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "") || crypto.randomUUID().slice(0, 8);
-
-  return `${local}+cubeva-${suffix}@${domain}`;
-}
-
-function previewTestEmailAlias(email: string, username: string) {
-  if (!email.trim() || !email.includes("@")) {
-    return "you+cubeva-mayacuber@example.com";
-  }
-
-  return makeTestEmailAlias(email, username || "test");
-}
-
 function authErrorMessage(message: string) {
   const normalized = message.toLowerCase();
 
@@ -238,9 +185,9 @@ function authErrorMessage(message: string) {
 
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="grid min-h-screen items-center justify-items-center gap-6 p-[22px]">
-      <div className="fixed left-[22px] top-[22px] flex items-center gap-3">
-        <div className="flex h-[42px] w-[42px] flex-none items-center justify-center rounded-lg bg-accent font-black text-[#101615] shadow-[inset_-10px_-10px_0_#f5a623,inset_10px_10px_0_#2f81ed]">
+    <main className="grid min-h-screen items-center justify-items-center gap-6 p-5.5">
+      <div className="fixed left-5.5 top-5.5 flex items-center gap-3">
+        <div className="flex h-10.5 w-10.5 flex-none items-center justify-center rounded-lg bg-accent font-black text-[#101615] shadow-[inset_-10px_-10px_0_#f5a623,inset_10px_10px_0_#2f81ed]">
           CV
         </div>
         <div>
